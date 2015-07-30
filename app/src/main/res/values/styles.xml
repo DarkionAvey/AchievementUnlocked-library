@@ -1,0 +1,21 @@
+<resources>
+
+    <style name="AppTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:colorBackground">@color/bg</item>
+        <item name="android:windowBackground">@color/bg</item>
+
+    </style>
+
+
+    <style name="bitButton">
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/action_button</item>
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:textAppearance">?android:attr/textAppearanceSmall</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">#fff</item>
+
+        <item name="android:layout_marginTop">@dimen/activity_vertical_margin</item>
+    </style>
+</resources>

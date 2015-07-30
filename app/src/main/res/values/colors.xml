@@ -1,0 +1,6 @@
+<resources>
+    <color name="bg">#3F51B5</color>
+    <color name="section">#9FA8DA</color>
+
+    <color name="status_bar">#303F9F</color>
+</resources>

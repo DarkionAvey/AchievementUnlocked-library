@@ -1,0 +1,11 @@
+<resources>
+    <!-- Default screen margins, per the Android Design guidelines. -->
+    <item name="achievement_subtitle" type="id"/>
+    <item name="achievement_title" type="id"/>
+    <item name="achievement_main_view" type="id"/>
+    <item name="achievement_body" type="id"/>
+    <item name="achievement_icon" type="id"/>
+
+
+
+</resources>

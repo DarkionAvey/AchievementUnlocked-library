@@ -511,16 +511,20 @@ public class AchievementUnlocked {
     }
 
     private void setOrientation(boolean toggle) {
-        Activity activity = (Activity) context;
-        int currentOrientation = context.getResources().getConfiguration().orientation;
-        if (toggle)
-            if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
-                activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
-            } else {
-                activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT);
-            }
-        else activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
+      try {
+            Activity activity = (Activity) context;
+            int currentOrientation = context.getResources().getConfiguration().orientation;
+            if (toggle)
+                if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
+                    activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+                } else {
+                    activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT);
+                }
+            else activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
 
+        } catch (ClassCastException e) {
+            e.printStackTrace();
+        }
     }
 
     public AchievementUnlocked dismiss() {

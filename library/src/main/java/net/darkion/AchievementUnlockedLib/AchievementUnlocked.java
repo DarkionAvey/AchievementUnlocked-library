@@ -4,10 +4,7 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.annotation.TargetApi;
-import android.app.Activity;
 import android.content.Context;
-import android.content.pm.ActivityInfo;
-import android.content.res.Configuration;
 import android.graphics.PixelFormat;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
@@ -489,7 +486,6 @@ public class AchievementUnlocked {
 
 
     public void show() {
-        setOrientation(true);
         if (listener != null)
             listener.onAchievementBeingCreated(achievementUnlocked, false);
         icon.animate().scaleX(1f).setDuration(250).scaleY(1f).setInterpolator(new OvershootInterpolator()).setStartDelay(delay + 200).setListener(new AnimatorListenerAdapter() {
@@ -510,22 +506,7 @@ public class AchievementUnlocked {
         }).start();
     }
 
-    private void setOrientation(boolean toggle) {
-      try {
-            Activity activity = (Activity) context;
-            int currentOrientation = context.getResources().getConfiguration().orientation;
-            if (toggle)
-                if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
-                    activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
-                } else {
-                    activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT);
-                }
-            else activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
 
-        } catch (ClassCastException e) {
-            e.printStackTrace();
-        }
-    }
 
     public AchievementUnlocked dismiss() {
         shrinkAchievement(true);
@@ -595,7 +576,7 @@ public class AchievementUnlocked {
 // *shrug emoji*
                                                 }
 
-                                            setOrientation(false);
+
                                         }
                                     }).start();
                                 }
@@ -617,8 +598,6 @@ public class AchievementUnlocked {
     }
 
 
-
-
     private void expandAchievement(final boolean continuous) {
         if (listener != null)
             listener.onAchievementExpanding(achievementUnlocked, false);
@@ -626,7 +605,7 @@ public class AchievementUnlocked {
         subtitleText.setVisibility(View.VISIBLE);
         int stretched;
         if (subtitle != null)
-            stretched = Math.max(title.getWidth(), subtitleText.getWidth()) + initialSize + 70;
+            stretched = Math.max(title.getWidth(), subtitleText.getWidth()) + initialSize + 90;
         else stretched = title.getWidth() + initialSize + 70;
 
 

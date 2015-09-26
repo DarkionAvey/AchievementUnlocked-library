@@ -7,6 +7,8 @@ import android.animation.ArgbEvaluator;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -14,34 +16,72 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewPropertyAnimator;
 import android.widget.Button;
-import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 
 import net.darkion.AchievementUnlockedLib.AchievementUnlocked;
 
-import org.w3c.dom.Text;
-
 import java.util.ArrayList;
 
 
 public class MainActivity extends Activity implements View.OnClickListener {
+    public void androidM() {
+        Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:" + getPackageName()));
+        startActivityForResult(intent, 123);
+
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == 123) {
+            if (!android.provider.Settings.canDrawOverlays(this)) {
+                Toast.makeText(this, "Couldn't get the permission, terminating process", Toast.LENGTH_LONG).show();
+                finish();
+            }
+        }
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+
         setContentView(R.layout.activity_main);
+        if (Build.VERSION.SDK_INT >= 23) {
+
+            if (!Settings.canDrawOverlays(getApplicationContext()))
+                new AlertDialog.Builder(this)
+
+                        .setMessage("Starting from Android 6, " + getResources().getString(R.string.app_name) + " needs permission to display notifications. Click enable to proceed")
+                        .setPositiveButton("Enable", new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                androidM();
+                            }
+                        })
+
+                        .show();
+
+        }
+
+
         AdView mAdView = (AdView) findViewById(R.id.adView);
         AdRequest adRequest = new AdRequest.Builder().build();
         mAdView.loadAd(adRequest);
         final ViewGroup mainView = (ViewGroup) findViewById(R.id.container);
         ArrayList<View> buttons = getButtons(mainView);
-        for (int i = 0; i < buttons.size(); i++) {
+        for (
+                int i = 0;
+                i < buttons.size(); i++)
+
+        {
             Button button = (Button) buttons.get(i);
             String title = "Click me";
             switch (i) {
@@ -78,13 +118,16 @@ public class MainActivity extends Activity implements View.OnClickListener {
                     break;
 
                 case 9:
-                    title = "Attention toast with timeout and custom animations";
+                    title = "Toast with timeout and custom animations";
                     break;
 
                 case 10:
                     title = "Google Play Games log-in";
                     break;
 
+                case 11:
+                    title = "Swipe to dismiss";
+                    break;
             }
             button.setText(title);
             button.setTag(i);
@@ -120,7 +163,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
                 new AchievementUnlocked(this).setTitle("Transhumanist").setSubTitle("Augmented").setTypeface(Typeface.createFromAsset(getApplicationContext().getAssets(), "font.TTF")).setIcon(getDrawableFromRes(R.drawable.mario)).setBackgroundDrawable(getDrawableFromRes(R.drawable.custom_bg)).isLarge(true).build().show();
                 break;
             case 2:
-                new AchievementUnlocked(this).setTitle("Pacifist").setSubTitle("They don't deserve death").setIcon(getDrawableFromRes(R.drawable.monster)).isRounded(false).isLarge(false).alignTop(false).build().show();
+                new AchievementUnlocked(getApplicationContext()).setTitle("Pacifist").setSubTitle("They don't deserve death").setIcon(getDrawableFromRes(R.drawable.monster)).isRounded(false).isLarge(false).alignTop(false).build().show();
                 break;
             case 3:
 
@@ -398,6 +441,30 @@ public class MainActivity extends Activity implements View.OnClickListener {
                     }
                 });
                 gpg.show();
+
+                break;
+
+            case 11:
+
+                final AchievementUnlocked swipeToDismissPopUp = new AchievementUnlocked(this).setTitle("You can swipe to dismiss this pop-up").
+                        setSubTitle("Swipe to left or right").setIcon(getDrawableFromRes(R.drawable.monster)).isRounded(false).
+                        isPersistent(true).alignTop(false).
+                        isLarge(false).build();
+
+
+                final ViewGroup viewGroup = (ViewGroup) swipeToDismissPopUp.getAchievementView().getRootView();
+                viewGroup.setOnTouchListener(new SwipeDismissTouchListener(swipeToDismissPopUp.getAchievementView(), null, new SwipeDismissTouchListener.OnDismissCallback() {
+                    @Override
+                    public void onDismiss(View view, Object token) {
+                        swipeToDismissPopUp.dismissWithoutAnimation();
+
+
+                    }
+                }));
+
+
+                swipeToDismissPopUp.show();
+
 
                 break;
 

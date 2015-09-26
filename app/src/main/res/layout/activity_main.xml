@@ -141,6 +141,7 @@
             <Button style="@style/bitButton" />
 
             <Button style="@style/bitButton" />
+            <Button style="@style/bitButton" />
 
 
         </LinearLayout>

@@ -34,7 +34,7 @@ public class AchievementUnlocked {
 
     Context context;
     private String titleString = "Achievement unlocked!", subtitle;
-    private int duration = 2000, delay = 100, backgroundColor = 0xffffffff, iconBG, titleColor = 0xaa000000, subtitleColor = 0, yOffset = 0;
+    private int duration = 2000, delay = 100, backgroundColor = 0xffffffff, iconBG, titleColor = 0xaa000000, subtitleColor = 0;
     private Drawable iconDrawable;
     private boolean large = true, alignTop = true, isRounded = true, persistent = false;
     private Typeface typeface;
@@ -100,9 +100,6 @@ public class AchievementUnlocked {
         return subtitleColor;
     }
 
-    public int getyOffset() {
-        return yOffset;
-    }
 
     public boolean isLarge() {
         return large;
@@ -478,6 +475,8 @@ public class AchievementUnlocked {
         container.addView(title);
         container.addView(subtitleText);
 
+
+
         container.setLayoutParams(containerLP);
         windowManager.addView(view, params);
 
@@ -507,12 +506,28 @@ public class AchievementUnlocked {
     }
 
 
-
-    public AchievementUnlocked dismiss() {
+    public void dismiss() {
         shrinkAchievement(true);
-        return this;
     }
 
+
+    public void dismissWithoutAnimation() {
+        removeView();
+    }
+
+    private void removeView() {
+        try {
+            windowManager.removeView(container.getRootView());
+            System.gc();
+            typeface=null;
+            achievementUnlocked=null;
+            windowManager=null;
+            container=null;
+
+        } catch (Exception e) {
+// *shrug emoji*
+        }
+    }
 
     private void shrinkAchievement(final boolean continuous) {
         expanded = false;
@@ -569,12 +584,7 @@ public class AchievementUnlocked {
 
                                             container.clearAnimation();
                                             if (container.getRootView() != null)
-                                                try {
-                                                    windowManager.removeView(container.getRootView());
-
-                                                } catch (java.lang.IllegalArgumentException e) {
-// *shrug emoji*
-                                                }
+                                                removeView();
 
 
                                         }

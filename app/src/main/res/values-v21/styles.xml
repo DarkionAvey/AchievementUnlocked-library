@@ -1,15 +1,18 @@
 <resources>
 
-    <!-- Base application theme. -->
-    <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
-        <item name="android:colorBackground">@color/bg</item>
-        <item name="android:colorPrimary">@color/bg</item>
-        <item name="android:colorPrimaryDark">@color/status_bar</item>
-        <item name="android:windowBackground">@color/bg</item>
-        <item name="android:navigationBarColor">@color/status_bar</item>
+    <style name="MainTheme" parent="MainThemeCommon">
+        <item name="android:colorAccent">@color/accent</item>
+        <item name="android:colorPrimary">@color/accent</item>
+        <item name="android:colorPrimaryDark">@color/accent</item>
 
 
     </style>
+    <style name="FAB">
+    </style>
+    <style name="Card">
+        <item name="android:elevation">@dimen/elevation</item>
+    </style>
+
 
 
 </resources>

@@ -1,6 +1,25 @@
 <resources>
-    <string name="app_name">AchievementUnlocked!</string>
-
-    <string name="hello_world">Hello world!</string>
-    <string name="action_settings">Settings</string>
+    <string name="app_name">AchievementUnlocked</string>
+    <string name="clickable">Clickable</string>
+    <string name="swipe_to_dismiss">Swipe to dismiss</string>
+    <string name="others">Others</string>
+    <string name="blacklist">Blacklist</string>
+    <string name="about">About</string>
+    <string name="check_source_on_github">Check source on GitHub</string>
+    <string name="if_you_liked_this_app_help_its_development_by_donating">If you liked this app, help its development by donating!</string>
+    <string name="donate">Donate</string>
+    <string name="top_aligned">Top-aligned</string>
+    <string name="large">Large</string>
+    <string name="rounded">Rounded</string>
+    <string name="appearance">Appearance</string>
+    <string name="test_a_pop_up">Test a morphing popup</string>
+    <string name="service_is_not_running">Service is not running</string>
+    <string name="core">Core</string>
+    <string name="this_is_a_preview_pop_up">This is a preview pop-up</string>
+    <string name="hello">Hello!</string>
+    <string name="hide_popups_that_contain_specific_words">Hide popups that contain certain phrases (case insensitive). Long-press the add button to use regular expression</string>
+    <string name="e_g_keyboard">E.g. keyboard</string>
+    <string name="help">Help</string>
+    <string name="help_text">If nothing shows up:\n1-Disable the service. Depending on your phone, you might need to exclude this app from your \'cleaner\' apps, since they stop the service after few minutes due to \'increased battery usage\'.\n2-Restart your device.\n3-Clear cache.\n4-Re-enable the service.\nIf this doesn\'t help, try clearing the data, although this will delete blacklist entries.</string>
+    <string name="hide_persistent_notification">Show persistent notification</string>
 </resources>

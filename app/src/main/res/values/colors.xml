@@ -1,6 +1,13 @@
 <resources>
-    <color name="bg">#3F51B5</color>
-    <color name="section">#9FA8DA</color>
-
-    <color name="status_bar">#303F9F</color>
+    <color name="bg">#2b2b31</color>
+    <color name="card">#37373E</color>
+    <color name="text">#eee</color>
+    <color name="bottom_chin">#1e000000</color>
+    <color name="bottom_chin_fab_inactive">@color/bottom_chin_hint</color>
+    <color name="bottom_chin_fab_icon">@color/card</color>
+    <color name="bottom_chin_text">#aaa</color>
+    <color name="bottom_chin_hint">#999</color>
+    <color name="accent">#aa55ff</color>
+    <color name="accent_fg">#49276b</color>
+    <color name="divider">#13ffffff</color>
 </resources>

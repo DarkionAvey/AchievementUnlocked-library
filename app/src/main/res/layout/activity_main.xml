@@ -1,165 +1,570 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:ads="http://schemas.android.com/apk/res-auto"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/scrollView"
     android:layout_width="match_parent"
-
     android:layout_height="match_parent"
     android:clipToPadding="false"
-
+    android:paddingBottom="16dp"
     tools:context=".MainActivity">
 
-    <ScrollView
+    <LinearLayout
+        android:id="@+id/main"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clipToPadding="false"
-        android:paddingBottom="80dp"
-        android:paddingLeft="@dimen/activity_horizontal_margin"
-        android:paddingRight="@dimen/activity_horizontal_margin"
-        android:paddingTop="@dimen/activity_vertical_margin">
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:fitsSystemWindows="true"
+        android:focusableInTouchMode="true"
+        android:orientation="vertical">
 
-        <LinearLayout
-            android:id="@+id/container"
+
+        <net.darkion.achievementUnlockedApp.BoundedLinearLayout
+            android:id="@+id/preview"
+            style="@style/Card"
             android:layout_width="match_parent"
+            android:layout_height="300dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="@dimen/inter_card_margin"
+            android:background="@color/card"
+            android:orientation="vertical"
+            app:bounded_width="@dimen/max_width"
+            >
 
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <ImageView
+                    android:id="@+id/wallpaper"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"/>
+
+                <ImageView
+                    android:id="@+id/overlay"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#20000000"/>
+
+                <LinearLayout
+                    android:id="@+id/container"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginEnd="@dimen/margin"
+                    android:layout_marginStart="@dimen/margin"
+                    >
+
+                    <RelativeLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clipToPadding="false"
+                        android:orientation="vertical">
+
+
+                        <LinearLayout
+                            android:id="@+id/achievement_icon_bg"
+                            android:layout_width="@dimen/large"
+                            android:layout_height="@dimen/large"
+
+                            android:layout_alignParentStart="true">
+
+                            <ImageView
+                                android:id="@+id/achievement_icon"
+                                android:layout_width="@dimen/large"
+                                android:layout_height="@dimen/large"
+                                android:padding="5dp"
+                                android:scaleType="centerInside"
+                                android:src="@drawable/ic_mood"
+                                />
+                        </LinearLayout>
+
+
+                        <LinearLayout
+                            android:id="@+id/textContainer"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_centerVertical="true"
+                            android:layout_toEndOf="@+id/achievement_icon_bg"
+                            android:orientation="vertical"
+                            android:paddingEnd="20dp"
+                            android:paddingStart="10dp">
+
+                            <TextView
+                                android:id="@+id/title"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/hello"
+                                android:textAppearance="@android:style/TextAppearance.DeviceDefault.Small"/>
+
+                            <TextView
+                                android:id="@+id/subtitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/this_is_a_preview_pop_up"
+                                android:textAppearance="@android:style/TextAppearance.DeviceDefault.Small"
+                                />
+                        </LinearLayout>
+
+
+                    </RelativeLayout>
+
+
+                </LinearLayout>
+            </FrameLayout>
+        </net.darkion.achievementUnlockedApp.BoundedLinearLayout>
+
+        <net.darkion.achievementUnlockedApp.BoundedLinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="@dimen/inter_card_margin"
+            android:background="@color/card"
+            android:orientation="vertical"
+            app:bounded_width="@dimen/max_width">
 
-
-            <ImageView
-                android:id="@+id/imageView"
-                android:layout_width="wrap_content"
+            <TextView
+                style="@style/TextAppearance.AppCompat.Body2"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
+                android:layout_margin="16dp"
 
-                android:layout_marginBottom="30dp"
-                android:layout_marginTop="10dp"
-                android:src="@drawable/logo" />
+                android:text="@string/core"
+                android:textColor="@color/accent"/>
+
+
+            <Switch
+                android:id="@+id/master"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:background="?android:selectableItemBackground"
+                android:focusable="false"
+                android:focusableInTouchMode="false"
+                android:paddingLeft="@dimen/activity_horizontal_margin"
+                android:paddingRight="@dimen/activity_horizontal_margin"
+                android:text="@string/service_is_not_running"
+                android:textColor="@color/text"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/divider"/>
+
+
+            <TextView
+                android:id="@+id/test"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:background="?android:selectableItemBackground"
+                android:gravity="center_vertical"
+                android:onClick="test"
+                android:paddingLeft="@dimen/activity_horizontal_margin"
+                android:paddingRight="@dimen/activity_horizontal_margin"
+                android:text="@string/test_a_pop_up"
+                android:textColor="@color/text"/>
+
+
+        </net.darkion.achievementUnlockedApp.BoundedLinearLayout>
+
+
+        <net.darkion.achievementUnlockedApp.BoundedLinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="@dimen/inter_card_margin"
+            android:background="@color/card"
+
+            android:orientation="vertical"
+            app:bounded_width="@dimen/max_width">
+
+            <TextView
+                style="@style/TextAppearance.AppCompat.Body2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="16dp"
+
+                android:text="@string/appearance"
+                android:textColor="@color/accent"/>
+
+            <Switch
+                android:id="@+id/rounded"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:background="?android:selectableItemBackground"
+                android:paddingLeft="@dimen/activity_horizontal_margin"
+                android:paddingRight="@dimen/activity_horizontal_margin"
+
+                android:text="@string/rounded"
+                android:textColor="@color/text"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/divider"/>
+
+            <Switch
+                android:id="@+id/large"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:background="?android:selectableItemBackground"
+                android:paddingLeft="@dimen/activity_horizontal_margin"
+                android:paddingRight="@dimen/activity_horizontal_margin"
+
+                android:text="@string/large"
+                android:textColor="@color/text"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/divider"/>
+
+            <Switch
+                android:id="@+id/top"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:background="?android:selectableItemBackground"
+                android:paddingLeft="@dimen/activity_horizontal_margin"
+                android:paddingRight="@dimen/activity_horizontal_margin"
+                android:text="@string/top_aligned"
+
+                android:textColor="@color/text"/>
+        </net.darkion.achievementUnlockedApp.BoundedLinearLayout>
+
+        <net.darkion.achievementUnlockedApp.BoundedRelativeLayout
+            android:id="@+id/adCard"
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="@dimen/inter_card_margin"
+            android:background="@color/card"
+            android:clipToPadding="false"
+            android:orientation="horizontal"
+            app:bounded_width="@dimen/max_width"
+            >
+
+            <com.google.android.gms.ads.AdView
+                android:id="@+id/adView"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_centerInParent="true"
+                ads:adSize="BANNER"
+                ads:adUnitId="ca-app-pub-2646452834560679/7331185347"/>
+
+
+        </net.darkion.achievementUnlockedApp.BoundedRelativeLayout>
+
+
+        <net.darkion.achievementUnlockedApp.BoundedLinearLayout
+            android:id="@+id/donateCard"
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="@dimen/inter_card_margin"
+            android:background="@drawable/donate_card"
+            android:orientation="horizontal"
+            app:bounded_width="@dimen/max_width">
+
+
+            <FrameLayout
+                android:layout_width="100dp"
+                android:layout_height="match_parent"
+                >
+
+                <net.darkion.achievementUnlockedApp.BeatingImageView
+                    android:id="@+id/heart"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center_vertical|start"
+                    android:padding="5dp"
+                    android:src="@drawable/heart"
+                    />
+
+
+                <ImageView
+                    android:id="@+id/wow"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="10dp"
+                    android:src="@drawable/wow"
+                    />
+
+
+            </FrameLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="150dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:orientation="vertical"
+                android:padding="10dp"
+                >
 
-                android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="@dimen/activity_vertical_margin"
-                android:layout_marginTop="@dimen/activity_vertical_margin"
-                android:orientation="horizontal">
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:text="@string/donate"
+                    android:textColor="@color/accent_fg"
+                    android:textSize="16sp"
+                    android:textStyle="bold"/>
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="fill_parent"
-                    android:layout_gravity="center_vertical"
-                    android:layout_weight="0.5"
-                    android:onClick="download"
-                    android:orientation="vertical">
-
-                    <ImageView
-                        android:id="@+id/imageView2"
-                        android:layout_width="130dp"
-                        android:layout_height="130dp"
-                        android:layout_gravity="center_horizontal"
-                        android:padding="20dp"
-                        android:src="@drawable/git" />
-
-                    <TextView
-                        android:id="@+id/textView"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_horizontal"
-                        android:text="Download"
-                        android:textAllCaps="true"
-                        android:textAppearance="?android:attr/textAppearanceSmall"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="fill_parent"
-                    android:layout_gravity="center_vertical"
-                    android:layout_weight="0.5"
-                    android:onClick="howTo"
-                    android:orientation="vertical">
-
-                    <ImageView
-                        android:layout_width="130dp"
-                        android:layout_height="130dp"
-                        android:layout_gravity="center_horizontal"
-                        android:padding="20dp"
-                        android:src="@drawable/docs" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_horizontal"
-                        android:text="How-to"
-                        android:textAllCaps="true"
-                        android:textAppearance="?android:attr/textAppearanceSmall"
-                        android:textStyle="bold" />
-                </LinearLayout>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:gravity="center_vertical"
+                    android:text="@string/if_you_liked_this_app_help_its_development_by_donating"
+                    android:textColor="@color/accent_fg"/>
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/games"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/activity_vertical_margin"
-                android:text="Games achievement"
-                android:textAllCaps="true"
-                android:textAppearance="?android:attr/textAppearanceSmall"
-                android:textColor="@color/section"
-                android:textStyle="bold" />
 
-            <Button style="@style/bitButton" />
-
-            <Button style="@style/bitButton" />
-
-            <Button style="@style/bitButton" />
-
-            <Button style="@style/bitButton" />
-
-            <TextView
-                android:id="@+id/others"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/activity_vertical_margin"
-                android:text="Other uses"
-                android:textAllCaps="true"
-                android:textAppearance="?android:attr/textAppearanceSmall"
-                android:textColor="@color/section"
-                android:textStyle="bold" />
-
-            <Button style="@style/bitButton" />
-
-            <Button style="@style/bitButton" />
-
-            <Button style="@style/bitButton" />
-
-            <Button style="@style/bitButton" />
-
-            <Button style="@style/bitButton" />
-
-            <Button style="@style/bitButton" />
-
-            <Button style="@style/bitButton" />
-            <Button style="@style/bitButton" />
+        </net.darkion.achievementUnlockedApp.BoundedLinearLayout>
 
 
-        </LinearLayout>
-    </ScrollView>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:layout_gravity="center_horizontal|bottom"
-        android:clipToPadding="false"
-        android:orientation="horizontal">
-
-        <com.google.android.gms.ads.AdView
-            android:id="@+id/adView"
+        <net.darkion.achievementUnlockedApp.BoundedLinearLayout
+            style="@style/Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="@dimen/inter_card_margin"
+            android:background="@color/card"
+            android:orientation="vertical"
 
-            ads:adSize="BANNER"
-            ads:adUnitId="ca-app-pub-2646452834560679/7331185347" />
+            app:bounded_width="@dimen/max_width">
+
+            <TextView
+                style="@style/TextAppearance.AppCompat.Body2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="16dp"
+                android:text="@string/blacklist"
+                android:textColor="@color/accent"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:paddingLeft="@dimen/activity_horizontal_margin"
+                android:paddingRight="@dimen/activity_horizontal_margin"
+
+                android:text="@string/hide_popups_that_contain_specific_words"
+                android:textColor="@color/text"/>
+
+            <HorizontalScrollView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:clipToPadding="false"
+                android:paddingEnd="5dp"
+                android:paddingStart="5dp"
+                >
+
+                <LinearLayout
+                    android:id="@+id/blackListEntries"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:clipToPadding="false"
+                    android:orientation="horizontal"
+                    android:padding="5dp"/>
+            </HorizontalScrollView>
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:background="@color/bottom_chin"
+                android:minHeight="60dp"
+                android:paddingBottom="5dp"
+                >
+
+                <EditText
+                    android:id="@+id/blackListedPhrases"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:layout_toStartOf="@+id/addBlackList"
+                    android:background="@null"
+                    android:hint="@string/e_g_keyboard"
+                    android:maxLines="1"
+                    android:paddingEnd="16dp"
+                    android:paddingStart="16dp"
+                    android:textColor="@color/bottom_chin_text"
+                    android:textColorHint="@color/bottom_chin_hint"
+                    android:textSize="14sp"/>
+
+                <ImageView
+                    android:id="@+id/addBlackList"
+                    style="@style/FAB"
+                    android:layout_width="35dp"
+                    android:layout_height="35dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:layout_marginEnd="16dp"
+                    android:background="@drawable/fab"
+                    android:padding="10dp"
+                    android:src="@drawable/add"
+                    />
+
+
+            </RelativeLayout>
+        </net.darkion.achievementUnlockedApp.BoundedLinearLayout>
+
+
+        <net.darkion.achievementUnlockedApp.BoundedLinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="@dimen/inter_card_margin"
+            android:background="@color/card"
+            android:orientation="vertical"
+
+            app:bounded_width="@dimen/max_width">
+
+            <TextView
+                style="@style/TextAppearance.AppCompat.Body2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+
+                android:layout_margin="16dp"
+                android:text="@string/others"
+                android:textColor="@color/accent"/>
+
+            <Switch
+                android:id="@+id/swipeToDismiss"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:paddingLeft="@dimen/activity_horizontal_margin"
+                android:paddingRight="@dimen/activity_horizontal_margin"
+                android:text="@string/swipe_to_dismiss"
+                android:textColor="@color/text"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/divider"/>
+
+            <Switch
+                android:id="@+id/clickable"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:paddingLeft="@dimen/activity_horizontal_margin"
+                android:paddingRight="@dimen/activity_horizontal_margin"
+                android:text="@string/clickable"
+                android:textColor="@color/text"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/divider"/>
+
+            <Switch
+                android:id="@+id/persistent"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:paddingLeft="@dimen/activity_horizontal_margin"
+                android:paddingRight="@dimen/activity_horizontal_margin"
+                android:text="@string/hide_persistent_notification"
+                android:textColor="@color/text"/>
+
+
+        </net.darkion.achievementUnlockedApp.BoundedLinearLayout>
+
+
+        <net.darkion.achievementUnlockedApp.BoundedLinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="@dimen/inter_card_margin"
+            android:background="@color/card"
+            android:orientation="vertical"
+
+            app:bounded_width="@dimen/max_width">
+
+            <TextView
+                style="@style/TextAppearance.AppCompat.Body2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+
+                android:layout_margin="16dp"
+                android:text="@string/help"
+                android:textColor="@color/accent"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:paddingLeft="@dimen/activity_horizontal_margin"
+                android:paddingRight="@dimen/activity_horizontal_margin"
+
+                android:text="@string/help_text"
+                android:textColor="@color/text"/>
+
+        </net.darkion.achievementUnlockedApp.BoundedLinearLayout>
+
+
+        <net.darkion.achievementUnlockedApp.BoundedLinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="@dimen/inter_card_margin"
+            android:background="@color/card"
+
+            android:orientation="vertical"
+            app:bounded_width="@dimen/max_width">
+
+            <TextView
+                style="@style/TextAppearance.AppCompat.Body2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="16dp"
+                android:text="@string/about"
+                android:textColor="@color/accent"/>
+
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:background="?android:selectableItemBackground"
+                android:gravity="center_vertical"
+                android:onClick="goToDarkion"
+                android:paddingLeft="@dimen/activity_horizontal_margin"
+                android:paddingRight="@dimen/activity_horizontal_margin"
+
+                android:text="Developed by Darkion Avey"
+                android:textColor="@color/text"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/divider"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:background="?android:selectableItemBackground"
+                android:gravity="center_vertical"
+                android:onClick="goToGitHub"
+                android:paddingLeft="@dimen/activity_horizontal_margin"
+                android:paddingRight="@dimen/activity_horizontal_margin"
+
+                android:text="@string/check_source_on_github"
+                android:textColor="@color/text"/>
+
+        </net.darkion.achievementUnlockedApp.BoundedLinearLayout>
     </LinearLayout>
-</FrameLayout>
+
+</ScrollView>
+
+
+

@@ -265,7 +265,7 @@ public class AchievementUnlocked {
             if (mainViewLP == null) {
                 mainViewLP = new WindowManager.LayoutParams(
                         WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT,
-                        WindowManager.LayoutParams.TYPE_SYSTEM_ERROR, focusable
+                        WindowOverlayCompat.TYPE_SYSTEM_ERROR, focusable
                         ,
                         PixelFormat.TRANSLUCENT);
             }
@@ -1575,4 +1575,12 @@ class DeceleratingInterpolator implements TimeInterpolator {
     public float getInterpolation(float t) {
         return computeLog(t, mBase) * mLogScale;
     }
+}
+
+class WindowOverlayCompat {
+    private static final int ANDROID_OREO = 26;
+    private static final int TYPE_APPLICATION_OVERLAY = 2038;
+
+    static final int TYPE_SYSTEM_ERROR = Build.VERSION.SDK_INT < ANDROID_OREO ? WindowManager.LayoutParams.TYPE_SYSTEM_ERROR : TYPE_APPLICATION_OVERLAY;
+  
 }

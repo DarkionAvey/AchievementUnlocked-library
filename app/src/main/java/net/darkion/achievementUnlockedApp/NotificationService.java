@@ -17,9 +17,7 @@ import android.os.Build;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
 import android.os.PowerManager;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
@@ -37,13 +35,13 @@ import android.widget.Toast;
 import net.darkion.achievementUnlockedApp.AchievementIconView.AchievementIconViewStates;
 
 import java.util.ArrayList;
+import java.util.Collections;
 
 import static android.support.v4.app.NotificationCompat.CATEGORY_STATUS;
 import static android.support.v4.app.NotificationCompat.PRIORITY_MIN;
+import static net.darkion.achievementUnlockedApp.R.drawable.notification;
 
 public class NotificationService extends NotificationListenerService {
-
-
     private ArrayList<String> shownNotificationsIDs = new ArrayList<>();
     private ArrayList<ArrayList<String>> shownNotificationsText = new ArrayList<>();
     private ArrayList<String> shownNotificationsTitle = new ArrayList<>();
@@ -51,6 +49,9 @@ public class NotificationService extends NotificationListenerService {
     private String currentIconId = "system";
     private int currentTextColor = -1;
     private AchievementUnlocked achievementUnlocked;
+    public static String pendingIntentExtra = "fromPersistentNotification";
+    private final static String TAG = "DA";
+    private final static boolean DEBUG = false;
 
     /**
      * Initialization
@@ -59,21 +60,30 @@ public class NotificationService extends NotificationListenerService {
     public void onCreate() {
         super.onCreate();
         boolean persistent = getSharedPreferences("settings", Context.MODE_PRIVATE).getBoolean("persistent", true);
+
+
+        MainActivity.createNotificationChannels(this);
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, MainActivity.serviceChannelId);
+
         if (persistent) {
             Intent notificationIntent = new Intent(this, MainActivity.class);
+            notificationIntent.putExtra(pendingIntentExtra, true);
             PendingIntent pendingIntent = PendingIntent.getActivity(this, Notification.FLAG_ONGOING_EVENT, notificationIntent, 0);
-            Notification notification = new NotificationCompat.Builder(this)
+
+
+            Notification mNotification = notificationBuilder
                     .setOngoing(true).setPriority(PRIORITY_MIN)
-                    .setSmallIcon(R.drawable.notification).setColor(getResources().getColor(R.color.accent))
+                    .setSmallIcon(notification).setColor(getResources().getColor(R.color.accent))
                     .setCategory(CATEGORY_STATUS)
                     .setContentTitle("Service is running")
                     .setStyle(new NotificationCompat.BigTextStyle().bigText("Some ROMs such as MIUI and EMUI have aggressive RAM management to conserve battery life. Showing a persisting notification will prevent that. It is only recommended that you disable this if your phone is running vanilla Android. You can disable this from AU settings."))
                     .setContentText("This notification prevents the system from killing AU service")
-                    .setContentIntent(pendingIntent).build();
+                    .setContentIntent(pendingIntent)
+                    .build();
 
-            notification.flags |= Notification.FLAG_ONGOING_EVENT;
+            mNotification.flags |= Notification.FLAG_ONGOING_EVENT;
 
-            startForeground(666, notification);
+            startForeground(666, mNotification);
         } else stopForeground(true);
         initAchievement();
     }
@@ -91,13 +101,9 @@ public class NotificationService extends NotificationListenerService {
         if (blackListValues != null) {
             blackList.clear();
             if (blackListValues.contains("\n"))
-                for (String s : blackListValues.split("\n")) {
-                    blackList.add(s);
-                }
+                Collections.addAll(blackList, blackListValues.split("\n"));
             else blackList.add(blackListValues);
-
         }
-
     }
 
 
@@ -115,7 +121,7 @@ public class NotificationService extends NotificationListenerService {
         if (VERSION.SDK_INT >= VERSION_CODES.LOLLIPOP) {
             PowerManager powerManager = ((PowerManager) getSystemService(Context.POWER_SERVICE));
             //don't bother, pop-ups don't animate in power saving mode
-            if (powerManager.isPowerSaveMode()) return;
+            if (powerManager != null && powerManager.isPowerSaveMode()) return;
 
         }
 
@@ -205,25 +211,7 @@ public class NotificationService extends NotificationListenerService {
 
         //index shouldn't be -1
 
-        if (shownNotificationsTitle.get(index) == null && title != null || shownNotificationsTitle.get(index) != null && title == null) {
-
-            return false;
-        }
-
-        if (shownNotificationsText.get(index).isEmpty() && subtitle != null || !shownNotificationsText.get(index).contains(subtitle)) {
-
-            return false;
-        }
-
-
-        if (shownNotificationsTitle.get(index).equalsIgnoreCase(title)) {
-            return true;
-        }
-        if (shownNotificationsText.get(index).contains(subtitle)) {
-            return true;
-        }
-
-        return false;
+        return (shownNotificationsTitle.get(index) != null || title == null) && (shownNotificationsTitle.get(index) == null || title != null) && (!shownNotificationsText.get(index).isEmpty() || subtitle == null) && shownNotificationsText.get(index).contains(subtitle) && (shownNotificationsTitle.get(index).equalsIgnoreCase(title) || shownNotificationsText.get(index).contains(subtitle));
 
 
     }
@@ -234,6 +222,7 @@ public class NotificationService extends NotificationListenerService {
      * @param sbn source notification
      * @return everything inside a notification
      */
+    @SuppressWarnings("unused")
     private String printExtras(StatusBarNotification sbn) {
         StringBuilder builder = new StringBuilder();
         //the array extracted using regex, don't worry
@@ -379,9 +368,6 @@ public class NotificationService extends NotificationListenerService {
 
     }
 
-    private final String TAG = "DA";
-    private final boolean DEBUG = false;
-
     private boolean isInteresting(StatusBarNotification notification) {
 
         String title = getTitle(notification), subtitle = getText(notification);
@@ -447,6 +433,7 @@ public class NotificationService extends NotificationListenerService {
 
     /**
      * Convenience method to remove alpha from a color
+     *
      * @param color input color
      * @return opaque color
      */
@@ -495,8 +482,10 @@ public class NotificationService extends NotificationListenerService {
                 e.printStackTrace();
             }
         }
-        iconBG = Color.argb(MainActivity.notificationIconBgAlpha, Color.red(textColor), Color.green(textColor), Color.blue(textColor));
 
+        if (getSharedPreferences("settings", Context.MODE_PRIVATE).getBoolean("shadedIcon", true))
+            iconBG = Color.argb(MainActivity.notificationIconBgAlpha, Color.red(textColor), Color.green(textColor), Color.blue(textColor));
+        else iconBG = Color.TRANSPARENT;
         if (currentIconId.equals(getIconId(sbn))) {
             if (getOpaqueColor(textColor) != getOpaqueColor(currentTextColor))
                 data.setState(AchievementIconViewStates.FADE_DRAWABLE);
@@ -504,7 +493,6 @@ public class NotificationService extends NotificationListenerService {
                 data.setState(AchievementIconViewStates.SAME_DRAWABLE);
             }
         }
-
         iconFinal.setColorFilter(getOpaqueColor(textColor), PorterDuff.Mode.SRC_IN);
 
         data.setIcon(iconFinal);
@@ -523,17 +511,10 @@ public class NotificationService extends NotificationListenerService {
                     }
                 }
             });
+        currentIconId = getIconId(sbn);
+        currentTextColor = data.getTextColor();
+        achievementUnlocked.show(data);
 
-
-        new Handler(Looper.getMainLooper()).post(new Runnable() {
-            @Override
-            public void run() {
-                currentIconId = getIconId(sbn);
-                currentTextColor = data.getTextColor();
-                achievementUnlocked.show(data);
-
-            }
-        });
     }
 
     /**
@@ -582,7 +563,6 @@ public class NotificationService extends NotificationListenerService {
 
             if (bmp == null) {
                 int iconId = extras.getInt("android.icon");
-
                 if (iconId != -1)
                     try {
                         icon = getApplicationContext().createPackageContext(getPackageName(sbn), CONTEXT_IGNORE_SECURITY).getResources().getDrawable(iconId);
@@ -592,15 +572,13 @@ public class NotificationService extends NotificationListenerService {
             } else {
                 icon = new BitmapDrawable(getApplicationContext().getResources(), bmp);
             }
-
-
         }
 
         try {
             packageIcon = getPackageManager().getApplicationIcon(getPackageName(sbn));
         } catch (PackageManager.NameNotFoundException e) {
             e.printStackTrace();
-            packageIcon = getResources().getDrawable(R.drawable.ic_launcher);
+            packageIcon = getResources().getDrawable(R.mipmap.ic_launcher);
         }
         return new Drawable[]{icon, packageIcon};
     }
@@ -715,22 +693,17 @@ public class NotificationService extends NotificationListenerService {
 
 
     private void initAchievement() {
-
-
         if (achievementUnlocked == null) {
             achievementUnlocked = new AchievementUnlocked(getApplicationContext());
-
-
         }
+
         SharedPreferences settings = getSharedPreferences("settings", Context.MODE_PRIVATE);
         boolean top = settings.getBoolean("top", true);
         boolean rounded = settings.getBoolean("rounded", false);
         boolean large = settings.getBoolean("large", false);
         boolean dismiss = settings.getBoolean("dismiss", true);
 
-
         achievementUnlocked.setRounded(rounded).setLarge(large).setTopAligned(top).setDismissible(dismiss);
-
     }
 
     /**

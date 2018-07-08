@@ -2,17 +2,14 @@
 
     <style name="MainTheme" parent="MainThemeCommon">
         <item name="android:colorAccent">@color/accent</item>
-        <item name="android:colorPrimary">@color/accent</item>
-        <item name="android:colorPrimaryDark">@color/accent</item>
-
-
+        <item name="android:colorPrimary">@color/bg</item>
+        <item name="android:colorPrimaryDark">@color/bg</item>
     </style>
-    <style name="FAB">
-    </style>
+
+    <style name="FAB" />
+
     <style name="Card">
         <item name="android:elevation">@dimen/elevation</item>
     </style>
-
-
 
 </resources>

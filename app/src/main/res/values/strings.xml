@@ -2,12 +2,10 @@
     <string name="app_name">AchievementUnlocked</string>
     <string name="clickable">Clickable</string>
     <string name="swipe_to_dismiss">Swipe to dismiss</string>
-    <string name="others">Others</string>
+    <string name="extra">Extra</string>
     <string name="blacklist">Blacklist</string>
     <string name="about">About</string>
     <string name="check_source_on_github">Check source on GitHub</string>
-    <string name="if_you_liked_this_app_help_its_development_by_donating">If you liked this app, help its development by donating!</string>
-    <string name="donate">Donate</string>
     <string name="top_aligned">Top-aligned</string>
     <string name="large">Large</string>
     <string name="rounded">Rounded</string>
@@ -22,4 +20,17 @@
     <string name="help">Help</string>
     <string name="help_text">If nothing shows up:\n1-Disable the service. Depending on your phone, you might need to exclude this app from your \'cleaner\' apps, since they stop the service after few minutes due to \'increased battery usage\'.\n2-Restart your device.\n3-Clear cache.\n4-Re-enable the service.\nIf this doesn\'t help, try clearing the data, although this will delete blacklist entries.</string>
     <string name="hide_persistent_notification">Show persistent notification</string>
+    <string name="icon_bg">Icon background</string>
+    <string name="service_is_running">Service is running</string>
+    <string name="read_notification_request">Please give this app the permission to read notifications</string>
+    <string name="enable">Enable</string>
+    <string name="screen_overlay_permission">Screen overlay permission</string>
+    <string name="screen_overlay_permission_message">Starting from Android 6, user must grant the permission for apps to display pop-ups on top of other apps. Tap on \"enable\" to go to device settings</string>
+    <string name="toggle_au">Toggle AchievementUnlocked!</string>
+    <string name="grant_permission">Grant permission</string>
+    <string name="all_set">You\'re all set; enjoy</string>
+    <string name="did_you_know">Did you know?</string>
+    <string name="popups_scroll_text_if_long">Popups can scroll if the text is too long</string>
+    <string name="like_the_app">Like the app?</string>
+    <string name="leave_a_positive_review_on_google_play_store_it_helps_a_lot">Leave a positive review on Google Play store, it helps a lot!</string>
 </resources>

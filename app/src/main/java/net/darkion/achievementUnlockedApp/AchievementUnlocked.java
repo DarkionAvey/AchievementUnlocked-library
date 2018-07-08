@@ -20,6 +20,7 @@ import android.os.Build;
 import android.os.Build.VERSION;
 import android.os.PowerManager;
 import android.provider.Settings;
+import android.support.annotation.Nullable;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -41,6 +42,7 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.RelativeLayout.LayoutParams;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import net.darkion.achievementUnlockedApp.AchievementIconView.AchievementIconViewStates;
 
@@ -50,28 +52,28 @@ import static android.view.View.GONE;
 import static android.widget.LinearLayout.VERTICAL;
 import static java.lang.Boolean.FALSE;
 
-@SuppressWarnings("unused")
 /**
  * Basically an animated toast notification with queue support.
- *
+ * <p>
  * Doesn't work with power-saving mode on unless you implement your
  * own valueAnimator class.
- *
+ * <p>
  * This is 'all-in-one' library. You have to copy the class file
  * to your package folder, otherwise you won't have access to inner
  * classes such as AchievementData and listener.
- *
+ * <p>
  * Don't forget to grant 'draw over apps' permission (SYSTEM_ALERT_WINDOW)
- *
- *
+ * <p>
  * GPL
  * By DarkionAvey @ http://darkion.net/
  */
+@SuppressWarnings("unused")
 
 public class AchievementUnlocked {
+    private int currentContainerWidth;
     //dimens
     private int smallSize, largeSize, elevation, paddingLarge, paddingSmall, translationY, margin;
-    //for debugging purpose
+    //for debugging purposes
     final static int animationMultiplier = 1;
     private int initialSize = -1;
     //indices of data iterator
@@ -82,9 +84,8 @@ public class AchievementUnlocked {
     //achievements data
     private AchievementData[] achievements;
     private final OvershootInterpolator overshootInterpolator = new OvershootInterpolator();
-    //save previous width of popup just in case measureWidth returns 0 when using multiline popup
     private int readingDelay = 1500;
-
+    //animation interpolators
     private final TimeInterpolator interpolator = new DeceleratingInterpolator(50);
     private final AnticipateInterpolator anticipateInterpolator = new AnticipateInterpolator();
     private final TimeInterpolator accelerateInterpolator = new AccelerateInterpolator(50);
@@ -93,6 +94,8 @@ public class AchievementUnlocked {
     private AchievementListenerAdapter listener;
     private boolean isPowerSavingModeOn = false;
     private boolean isLarge = true, alignTop = true, isRounded = true;
+    private boolean notchMode = VERSION.SDK_INT >= 26;
+    private Integer statusBarHeight;
     private ViewGroup container;
     private AchievementIconView icon;
     private TextView titleTextView;
@@ -102,59 +105,124 @@ public class AchievementUnlocked {
     private ViewGroup achievementLayout;
     private WindowManager.LayoutParams mainViewLP;
     final boolean DEBUG = true;
+    private static final String TAG = "AU";
 
     public AchievementUnlocked(Context context) {
         this.context = context;
-
         initGlobalFields();
     }
 
+    /**
+     * Indicate that the system is running on a notched device.
+     * This is set to true on Oreo+ devices since TYPE_SYSTEM_ERROR is
+     * deprecated anyway and the popup will have to move below the status bar
+     *
+     * @param statusBarHeight custom status bar height (y shift) since this library
+     *                        does not have direct access to decor view. You can supply
+     *                        a null value and use the hardcoded status bar height
+     */
+    public void setNotchMode(@Nullable Integer statusBarHeight) {
+        this.notchMode = true;
+        if (statusBarHeight != null) this.statusBarHeight = statusBarHeight;
+    }
+
+    /**
+     * Indicate whether the popup should appear on top of the screen
+     * or not
+     *
+     * @param alignTop true for top alignment
+     * @return same AchievementUnlocked object
+     */
     public AchievementUnlocked setTopAligned(boolean alignTop) {
         this.alignTop = alignTop;
         return this;
     }
 
+    /**
+     * Set how many milliseconds the popup should wait before the next
+     * animation is played. This value is ignored when the popup width
+     * exceeds display width (aka scrolling popup).
+     * The default value is 1500 which is 1.5 seconds
+     *
+     * @param readingDelay reading duration in milliseconds
+     * @return same AchievementUnlocked object
+     */
     public AchievementUnlocked setReadingDelay(int readingDelay) {
         this.readingDelay = readingDelay;
         return this;
 
     }
 
+    /**
+     * Set true if you want the popup to be rounded. Default
+     * value is true
+     *
+     * @param rounded true for complete rounded appearance, false for rounded box
+     * @return same AchievementUnlocked object
+     */
     public AchievementUnlocked setRounded(boolean rounded) {
         isRounded = rounded;
         return this;
     }
 
-    public void setAchievementListener(AchievementListenerAdapter listener) {
+    /**
+     * Callbacks for different events occurring throughout the popup's
+     * life span
+     *
+     * @param listener the listener to be used
+     */
+    public void setAchievementListener(@Nullable AchievementListenerAdapter listener) {
         this.listener = listener;
     }
 
+    /**
+     * Set to true if you want the popup to be large. Default value
+     * is true. Large popup height is 65dp whereas the small one is
+     * 50dp
+     *
+     * @param large true for large popups, false for small ones
+     * @return same AchievementUnlocked object
+     */
     public AchievementUnlocked setLarge(boolean large) {
         this.isLarge = large;
         return this;
     }
 
-    public AchievementUnlocked isTopAligned(boolean alignTop) {
-        this.alignTop = alignTop;
-        return this;
-    }
-
+    /**
+     * @return the popup view without the scrim. You should not modify
+     * any of its properties since that might cause the animations
+     * to go haywire
+     */
     public View getAchievementView() {
         return container;
     }
 
+    /**
+     * @return the title text view
+     */
     public TextView getTitleTextView() {
         return titleTextView;
     }
 
+    /**
+     * @return the subtitle text view
+     */
     public TextView getSubtitleTextView() {
         return subtitleTextView;
     }
 
+    /**
+     * @return the icon view
+     */
     public View getIconView() {
         return icon;
     }
 
+    /**
+     * @return get the view containing the scrim (background fade) and
+     * the popup. You should not modify any of its properties since that might
+     * cause the animations to go haywire
+     */
     public ViewGroup getAchievementParent() {
         return achievementLayout;
     }
@@ -167,6 +235,7 @@ public class AchievementUnlocked {
 
     private boolean initiatedGlobalFields = false;
 
+    @SuppressLint("ObsoleteSdkInt")
     private void initGlobalFields() {
         if (!initiatedGlobalFields) {
             initiatedGlobalFields = true;
@@ -212,7 +281,6 @@ public class AchievementUnlocked {
             container.setClipChildren(false);
 
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-
                 achievementLayout.setClipToOutline(true);
             }
 
@@ -220,6 +288,11 @@ public class AchievementUnlocked {
             achievementBodyLP.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
             achievementBodyLP.addRule(CENTER_HORIZONTAL, RelativeLayout.TRUE);
             achievementBodyLP.bottomMargin = achievementBodyLP.topMargin = convertDpToPixel(10);
+
+            if ((VERSION.SDK_INT >= 26 || notchMode) && alignTop) {
+                achievementBodyLP.topMargin += statusBarHeight == null ? Math.round(getStatusBarHeight() * 1.7f) : statusBarHeight;
+            }
+
             container.setLayoutParams(achievementBodyLP);
             container.setTag("achievementBody");
             LinearLayout achievementIconBg = new LinearLayout(context);
@@ -265,8 +338,7 @@ public class AchievementUnlocked {
             if (mainViewLP == null) {
                 mainViewLP = new WindowManager.LayoutParams(
                         WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT,
-                        WindowOverlayCompat.TYPE_SYSTEM_ERROR, focusable
-                        ,
+                        WindowOverlayCompat.TYPE_SYSTEM_ERROR, focusable,
                         PixelFormat.TRANSLUCENT);
             }
 
@@ -291,7 +363,6 @@ public class AchievementUnlocked {
                 });
             }
             if (subtitleTextView == null) {
-
                 subtitleTextView.setSingleLine(true);
                 subtitleTextView.addTextChangedListener(new TextWatcher() {
                     @Override
@@ -313,7 +384,12 @@ public class AchievementUnlocked {
     }
 
 
-    void setDismissible(boolean dismissible) {
+    /**
+     * Set to true if you want the popup to be swipeable
+     *
+     * @param dismissible true for swipe to dismiss behaviour
+     */
+    public void setDismissible(boolean dismissible) {
         this.dismissible = dismissible;
         if (dismissible) {
             achievementLayout.setOnTouchListener(new SwipeDismissTouchListener());
@@ -325,7 +401,6 @@ public class AchievementUnlocked {
     }
 
     private int getTargetWidth(AchievementData data) {
-
         View textContainerFake = achievementLayout.findViewWithTag("textContainerFake");
         ((TextView) textContainerFake.findViewWithTag("titleFake")).setText(data.getTitle());
         ((TextView) textContainerFake.findViewWithTag("subtitleFake")).setText(data.getSubtitle());
@@ -366,7 +441,7 @@ public class AchievementUnlocked {
                 }
             }
         });
-        final TextView fakeTitle = ((TextView) achievementLayout.findViewWithTag("titleFake"));
+        final TextView fakeTitle = (achievementLayout.findViewWithTag("titleFake"));
         fakeTitle.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -385,7 +460,7 @@ public class AchievementUnlocked {
                 }
             }
         });
-        final TextView fakeSubTitle = ((TextView) achievementLayout.findViewWithTag("subtitleFake"));
+        final TextView fakeSubTitle = (achievementLayout.findViewWithTag("subtitleFake"));
         fakeSubTitle.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -449,8 +524,8 @@ public class AchievementUnlocked {
         } else {
             mainViewLP.gravity = Gravity.BOTTOM;
         }
-        // mainViewLP.width = stretched + (int) elevation;
-        if (alignTop && (achievementLayout.getBackground() == null || !(achievementLayout.getBackground() instanceof GradientDrawable))) {
+        // No scrim for Android P
+        if (alignTop && VERSION.SDK_INT < 28 && (achievementLayout.getBackground() == null || !(achievementLayout.getBackground() instanceof GradientDrawable))) {
             GradientDrawable scrim = new GradientDrawable();
             scrim.setShape(GradientDrawable.RECTANGLE);
             scrim.setColors(new int[]{0x40000000, 0});
@@ -460,7 +535,10 @@ public class AchievementUnlocked {
         } else if (!alignTop) {
             achievementLayout.setBackground(null);
         }
-        ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).addView(achievementLayout, mainViewLP);
+
+        final WindowManager manager = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE));
+        if (manager == null) throw new RuntimeException("No window manager found");
+        manager.addView(achievementLayout, mainViewLP);
         added = true;
     }
 
@@ -469,48 +547,43 @@ public class AchievementUnlocked {
         titleTextView.setTextColor(Color.rgb(Color.red(textColor), Color.green(textColor), Color.blue(textColor)));
     }
 
-    private void setBackground(View v, Drawable d) {
-        if (Build.VERSION.SDK_INT >= 16) {
-            v.setBackground(d);
-        } else v.setBackgroundDrawable(d);
-    }
 
+    /**
+     * use listeners instead
+     */
+    @Deprecated
     public AchievementUnlocked createViews() {
         buildAchievement();
         return this;
     }
 
-    private AchievementData[] concat(AchievementData[] a, AchievementData[] b) {
-        int aLen = a.length;
-        int bLen = b.length;
-        AchievementData[] c = new AchievementData[aLen + bLen];
-        System.arraycopy(a, 0, c, 0, aLen);
-        System.arraycopy(b, 0, c, aLen, bLen);
-        return c;
-    }
-
-    private final String TAG = "AU";
-
+    /**
+     * Pop the popup with the supplied data
+     *
+     * @param data data to be shown
+     */
     public void show(AchievementData... data) {
-//Check permission first
+        if (data == null || data.length == 0) {
+            Log.e(TAG, "Nothing to show");
+            return;
+        }
+        //Check permission first
         if (VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(context)) {
+            if (DEBUG)
+                Toast.makeText(context, "'canDrawOverlays' permission is not granted", Toast.LENGTH_LONG).show();
             Log.e(TAG, "'canDrawOverlays' permission is not granted");
             return;
-
         }
         //Don't bother if powersaving is on
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-            isPowerSavingModeOn = powerManager.isPowerSaveMode();
+            final PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            isPowerSavingModeOn = powerManager != null && powerManager.isPowerSaveMode();
             if (isPowerSavingModeOn) {
                 Log.w(TAG, "Power saving is on, AU was canceled");
                 return;
             }
         }
-        if (data == null || data.length == 0) {
-            Log.e(TAG, "Nothing to show");
-            return;
-        }
+
         if (added) {
             if (achievements != null) {
                 achievements = concat(achievements, data);
@@ -527,6 +600,9 @@ public class AchievementUnlocked {
         prepareMorphism();
     }
 
+    /**
+     * Instantly remove the popup view from window manager
+     */
     public void dismissWithoutAnimation() {
         removeView();
         if (listener != null)
@@ -547,6 +623,22 @@ public class AchievementUnlocked {
             animatorSet.end();
             animatorSet.cancel();
         }
+    }
+
+    private AchievementData[] concat(AchievementData[] a, AchievementData[] b) {
+        int aLen = a.length;
+        int bLen = b.length;
+        AchievementData[] c = new AchievementData[aLen + bLen];
+        System.arraycopy(a, 0, c, 0, aLen);
+        System.arraycopy(b, 0, c, aLen, bLen);
+        return c;
+    }
+
+    @SuppressLint("ObsoleteSdkInt")
+    private void setBackground(View v, Drawable d) {
+        if (Build.VERSION.SDK_INT >= 16) {
+            v.setBackground(d);
+        } else v.setBackgroundDrawable(d);
     }
 
     private void removeView() {
@@ -577,8 +669,10 @@ public class AchievementUnlocked {
         listener = null;
         ((View) icon.getParent()).setBackground(null);
         dismissed = false;
+        final WindowManager manager = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE));
+
         try {
-            ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).removeView(achievementLayout);
+            if (manager != null) manager.removeView(achievementLayout);
             added = false;
         } catch (Exception e) {
             e.printStackTrace();
@@ -599,8 +693,6 @@ public class AchievementUnlocked {
     private int getEndValue(int end) {
         return Math.min(end, matchParent);
     }
-
-    int currentContainerWidth;
 
     private ValueAnimator getContainerStretchAnimation(int start, int end) {
         final ValueAnimator containerStretch = ValueAnimator.ofInt(getStartValue(start), getEndValue(end));
@@ -710,15 +802,12 @@ public class AchievementUnlocked {
         return set;
     }
 
-
     private int getContainerBackgroundColor() {
         if ((container).getBackground() != null)
             if ((container).getBackground() instanceof GradientDrawableWithColors)
                 return ((GradientDrawableWithColors) (container).getBackground()).getGradientColor();
         return 0xffffffff;
     }
-
-    //  String subtitles[] = data.getSubtitle().split("\\r\\n|\\r|\\n");
 
     private static int countMatches(final String str, final String sub) {
         if (isEmpty(str) || isEmpty(sub)) {
@@ -745,7 +834,7 @@ public class AchievementUnlocked {
             return true;
         }
         for (int i = 0; i < strLen; i++) {
-            if (Character.isWhitespace(cs.charAt(i)) == false) {
+            if (!Character.isWhitespace(cs.charAt(i))) {
                 return false;
             }
         }
@@ -762,6 +851,10 @@ public class AchievementUnlocked {
     private AnimatorSet morphData() {
         AnimatorSet sets = new AnimatorSet();
         AchievementData data = achievements[index];
+
+        //Failed attempt to separate new lines in subtitle
+        //text into different popups
+
 //        String subtitleRaw = data.getSubtitle();
 //        String subtitles[] = null;
 //        int lines = getSubtitleLines(subtitleRaw);
@@ -810,14 +903,13 @@ public class AchievementUnlocked {
 
     }
 
-
     private AnimatorSet animateData(final AchievementData data) {
         final AnimatorSet backgroundAnimators = new AnimatorSet();
         final AnimatorSet inAnimation = new AnimatorSet();
         final AnimatorSet outAnimation = new AnimatorSet();
         final AnimatorSet result = new AnimatorSet();
 
-        ObjectAnimator titleIn = null, subtitleIn = null, titleOut = null, subtitleOut = null;
+        ObjectAnimator titleIn, subtitleIn = null, titleOut, subtitleOut = null;
         if ((container.getTag() != null && container.getTag() != data)) {
             int previousBgColor = 0xffffffff;
             int previousIconBgColor = 0x30ffffff;
@@ -927,6 +1019,8 @@ public class AchievementUnlocked {
 
         if (data.getSubtitle() != null) {
             AnimatorSet textViews = new AnimatorSet();
+            //this null check is useful when seperating subtitle different lines
+            //into different poups
             if (titleIn != null)
                 textViews.playTogether(titleIn, subtitleIn);
             else textViews.playTogether(subtitleIn);
@@ -982,10 +1076,9 @@ public class AchievementUnlocked {
                     mainViewLP.flags = nonFocusable;
                 }
                 container.setOnClickListener(data.getPopUpOnClickListener());
-                if (added)
-                    ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).updateViewLayout(achievementLayout, mainViewLP);
-
-
+                final WindowManager manager = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE));
+                if (manager != null && added)
+                    manager.updateViewLayout(achievementLayout, mainViewLP);
                 subtitleTextView.setText(subtitle);
                 titleTextView.setText(title);
                 setTextColor(data.getTextColor());
@@ -996,7 +1089,7 @@ public class AchievementUnlocked {
 
 
         boolean isBig = getEndValue(container.getMeasuredWidth()) >= matchParent;
-        ScrollTextView fake = ((ScrollTextView) achievementLayout.findViewWithTag("subtitleFake"));
+        ScrollTextView fake = (achievementLayout.findViewWithTag("subtitleFake"));
         fake.setText(data.getSubtitle());
         int duration = readingDelay;
         if ((matchParent) < getTargetWidth(data))
@@ -1072,7 +1165,6 @@ public class AchievementUnlocked {
             return;
         Drawable d = data.getIcon();
         if (d != null) {
-
             if (data.getState() == AchievementIconViewStates.FADE_DRAWABLE)
                 icon.fadeDrawable(d);
             else icon.setDrawable(d);
@@ -1101,24 +1193,27 @@ public class AchievementUnlocked {
                 @Override
                 public void run() {
                     hasBeenDismissed = true;
-                    if (alignTop)
+
+                    //Fade out the popup view instead of direct visibility
+                    // change, for aesthetics.
+                    // Since there is no scrim in bottom-aligned and Android P+,
+                    // we can use setVisibility directly
+
+                    if (alignTop && VERSION.SDK_INT < 28)
                         achievementLayout.animate().alpha(0f).setListener(new AnimatorListenerAdapter() {
                             @Override
                             public void onAnimationEnd(Animator animation) {
                                 super.onAnimationEnd(animation);
                                 achievementLayout.setVisibility(GONE);
-
-
-
                             }
                         }).start();
-                        //no scrim in bottom-aligned achievements
                     else achievementLayout.setVisibility(GONE);
                 }
             };
         }
 
 
+        @SuppressLint("ClickableViewAccessibility")
         @Override
         public boolean onTouch(View view, MotionEvent motionEvent) {
             motionEvent.offsetLocation(mTranslationX, 0);
@@ -1144,12 +1239,12 @@ public class AchievementUnlocked {
                     float swipePercentage = Math.abs(mTranslationX / spaceToEdge);
 
 
-                    if (swipePercentage>=0.5f) {
+                    if (swipePercentage >= 0.5f) {
                         dismiss = true;
                         dismissRight = deltaX > 0;
                     }
                     if (dismiss) {
-                        ObjectAnimator translation = ObjectAnimator.ofFloat(container, View.TRANSLATION_X, container.getTranslationX(), dismissRight ? container.getMeasuredWidth() : -container.getMeasuredWidth());
+                        ObjectAnimator translation = ObjectAnimator.ofFloat(container, View.TRANSLATION_X, container.getTranslationX(), 1.5f * (dismissRight ? container.getMeasuredWidth() : -container.getMeasuredWidth()));
                         translation.addUpdateListener(new AnimatorUpdateListener() {
                             @Override
                             public void onAnimationUpdate(ValueAnimator animation) {
@@ -1211,46 +1306,32 @@ public class AchievementUnlocked {
 
 
     private void setSwipeEffect(float amount) {
-
         container.setTranslationX(amount);
-//        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.LOLLIPOP) return;
-//        tmpRect.set(Math.abs(Math.round(amount)), 0, container.getWidth() - Math.abs(Math.round(amount)), initialSize);
-//        //if (Math.abs(amount) > container.getWidth()) return;
-//
-//        tmpRect.offset(Math.round(amount), 0);
-//        if (amount > 0 && tmpRect.left < (container.getWidth() - icon.getWidth())) {
-//            ((View) icon.getParent()).setTranslationX(tmpRect.left);
-//            ((View) titleTextView.getParent()).setTranslationX(tmpRect.left);
-//
-//        }
-//
-//        if (tmpRect.width() < initialSize) return;
-//
-//        container.setOutlineProvider(viewOutlineProvider);
-//        container.setClipToOutline(true);
-//        if (amount == 0) {
-//            container.setOutlineProvider(ViewOutlineProvider.BACKGROUND);
-//            ((View) icon.getParent()).setTranslationX(0);
-//            ((View) titleTextView.getParent()).setTranslationX(0);
-//
-//        }
-
     }
 
+    private int getStatusBarHeight() {
+        int result = 0;
+        int resourceId = Resources.getSystem().getIdentifier("status_bar_height", "dimen", "android");
+        if (resourceId > 0) {
+            result = Resources.getSystem().getDimensionPixelSize(resourceId);
+        }
+        return result;
+    }
 }
 
 /**
- * Class that holds the data to be displayed
- * Created by Darkion Avey
+ * Class that holds the data to be displayed by
+ * AchievementUnlocked object using the
+ * {@link AchievementUnlocked#show(AchievementData...)} method
  */
 class AchievementData {
     private String title = "", subtitle;
     private Drawable icon;
     private int textColor = 0xff000000, backgroundColor = 0xffffffff, iconBackgroundColor = 0x0;
     private View.OnClickListener onClickListener;
-    AchievementIconViewStates state = null;
+    private AchievementIconViewStates state = null;
 
-    AchievementData setSubtitle(String subtitle) {
+    public AchievementData setSubtitle(String subtitle) {
         this.subtitle = subtitle;
         return this;
     }
@@ -1265,38 +1346,42 @@ class AchievementData {
         result.setIconBackgroundColor(data.getIconBackgroundColor());
         result.setTextColor(data.getTextColor());
         result.setPopUpOnClickListener(data.getPopUpOnClickListener());
-
         return result;
     }
 
-    View.OnClickListener getPopUpOnClickListener() {
+    public View.OnClickListener getPopUpOnClickListener() {
         return onClickListener;
     }
 
-    AchievementData setPopUpOnClickListener(View.OnClickListener onClickListener) {
+    /**
+     * Assign a per-data onclick listener to the popup
+     *
+     * @return same AchievementData object
+     */
+    public AchievementData setPopUpOnClickListener(View.OnClickListener onClickListener) {
         this.onClickListener = onClickListener;
         return this;
     }
 
-    int getTextColor() {
+    public int getTextColor() {
         return textColor;
     }
 
-    AchievementData setTextColor(int textColor) {
+    public AchievementData setTextColor(int textColor) {
         this.textColor = textColor;
         return this;
     }
 
-    String getTitle() {
+    public String getTitle() {
         return title;
     }
 
-    AchievementData setTitle(String title) {
+    public AchievementData setTitle(String title) {
         this.title = title;
         return this;
     }
 
-    String getSubtitle() {
+    public String getSubtitle() {
         return subtitle;
     }
 
@@ -1304,16 +1389,30 @@ class AchievementData {
         return state;
     }
 
+    /**
+     * Indicate whether the popup icon should stay the same or
+     * fade when showing different Achievement data. Default is
+     * null which is the same as SAME_DRAWABLE.
+     * When FADE_DRAWABLE is set, the icon will animate change to the
+     * next data icon.
+     *
+     * @param state either of these two: FADE_DRAWABLE, SAME_DRAWABLE
+     */
     public void setState(AchievementIconViewStates state) {
         this.state = state;
     }
 
-    Drawable getIcon() {
-
+    public Drawable getIcon() {
         return icon;
     }
 
-    AchievementData setIcon(Drawable icon) {
+    /**
+     * Set popuup icon. Transparent one will be used if non is assigned
+     *
+     * @param icon icon drawable
+     * @return same AchievementData object
+     */
+    public AchievementData setIcon(Drawable icon) {
         this.icon = icon;
         return this;
     }
@@ -1322,7 +1421,13 @@ class AchievementData {
         return backgroundColor;
     }
 
-    AchievementData setBackgroundColor(int backgroundColor) {
+    /**
+     * Set popup background color
+     *
+     * @param backgroundColor integer color of background
+     * @return same AchievementData object
+     */
+    public AchievementData setBackgroundColor(int backgroundColor) {
         this.backgroundColor = backgroundColor;
         return this;
     }
@@ -1331,7 +1436,13 @@ class AchievementData {
         return iconBackgroundColor;
     }
 
-    AchievementData setIconBackgroundColor(int iconBackgroundColor) {
+    /**
+     * Set the background of the popup's icon
+     *
+     * @param iconBackgroundColor integer color
+     * @return same AchievementData object
+     */
+    public AchievementData setIconBackgroundColor(int iconBackgroundColor) {
         this.iconBackgroundColor = iconBackgroundColor;
         return this;
     }
@@ -1354,8 +1465,9 @@ abstract class AchievementListenerAdapter implements AchievementListener {
     }
 }
 
-/*
-Ticker textView
+
+/**
+ * Ticker text view used for subtitle view
  */
 @SuppressLint("AppCompatCustomView")
 class ScrollTextView extends TextView {
@@ -1381,13 +1493,6 @@ class ScrollTextView extends TextView {
         setHorizontalFadingEdgeEnabled(true);
     }
 
-    @Override
-    public void setText(CharSequence text, BufferType type) {
-        super.setText(text, type);
-
-
-    }
-
 
     @Override
     public void setVisibility(int visibility) {
@@ -1410,7 +1515,7 @@ class ScrollTextView extends TextView {
         final float gap = textWidth / 3.0f;
         int result = Math.round(
                 (textWidth - gap) / dpPerSec);
-        return result > 0 ? result * 1000 : 2000;
+        return result > 0 ? result * 100 : 2000;
     }
 
 
@@ -1545,6 +1650,7 @@ class AchievementIconView extends ImageView {
 }
 
 /* used by the abstract class adapter */
+@SuppressWarnings("unused")
 interface AchievementListener {
     void onViewCreated(AchievementUnlocked achievement, AchievementData[] data);
 
@@ -1553,9 +1659,6 @@ interface AchievementListener {
     void onAchievementDismissed(AchievementUnlocked achievement);
 }
 
-enum MorphingLine {
-    FIRST, LAST, INTERMEDIATE
-}
 
 class DeceleratingInterpolator implements TimeInterpolator {
 
@@ -1577,10 +1680,9 @@ class DeceleratingInterpolator implements TimeInterpolator {
     }
 }
 
+
 class WindowOverlayCompat {
     private static final int ANDROID_OREO = 26;
     private static final int TYPE_APPLICATION_OVERLAY = 2038;
-
     static final int TYPE_SYSTEM_ERROR = Build.VERSION.SDK_INT < ANDROID_OREO ? WindowManager.LayoutParams.TYPE_SYSTEM_ERROR : TYPE_APPLICATION_OVERLAY;
-  
 }

@@ -1,9 +1,11 @@
 package net.darkion.achievementUnlockedApp;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.widget.ImageView;
 
+@SuppressLint("AppCompatCustomView")
 public class BeatingImageView extends ImageView {
     public BeatingImageView(Context context) {
         super(context);
@@ -24,11 +26,8 @@ public class BeatingImageView extends ImageView {
     boolean scaleUp = true;
 
 
-    /**
-     * @param progress to determine direction of scroll
-     */
-    public void beatTheHeart(float progress) {
-        final ImageView heart = (ImageView) findViewById(R.id.heart);
+    public void beatTheHeart() {
+        final ImageView heart = findViewById(R.id.heart);
         float direction = 1;
         if (!scaleUp || heart.getScaleY() >= maxHeartScale) {
             direction = -1;

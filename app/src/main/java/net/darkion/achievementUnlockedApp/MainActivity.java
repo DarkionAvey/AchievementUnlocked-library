@@ -5,10 +5,12 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
 import android.animation.ValueAnimator.AnimatorUpdateListener;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningServiceInfo;
 import android.app.AlertDialog.Builder;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.WallpaperManager;
 import android.content.Context;
@@ -16,6 +18,7 @@ import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -25,15 +28,18 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.graphics.Palette;
+import android.support.v7.widget.AppCompatEditText;
+import android.support.v7.widget.SwitchCompat;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.transition.TransitionManager;
@@ -42,89 +48,73 @@ import android.view.View;
 import android.view.View.OnLongClickListener;
 import android.view.ViewGroup;
 import android.view.ViewGroup.MarginLayoutParams;
-import android.view.ViewTreeObserver;
 import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.view.ViewTreeObserver.OnScrollChangedListener;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.LinearLayout.LayoutParams;
 import android.widget.ScrollView;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import static android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+import static net.darkion.achievementUnlockedApp.NotificationService.pendingIntentExtra;
+import static net.darkion.achievementUnlockedApp.R.dimen.small;
+import static net.darkion.achievementUnlockedApp.R.drawable.regex;
 
-
+@SuppressLint("ApplySharedPref")
 public class MainActivity extends Activity {
-    String running = "Service is running";
-    String runningNot = "Service is not running";
-    Toast hint;
+    private Toast hint;
     boolean isLarge = false, isTop = true;
     boolean isRounded = false;
+    boolean isShaded = false;
     int initialSize;
-    LogDecelerateInterpolator interpolator = new LogDecelerateInterpolator(30, 0);
-    boolean needToChangeRadius = false, needToChangeHeight = false, needToChangeLocation = false;
+    private LogDecelerateInterpolator interpolator = new LogDecelerateInterpolator(30, 0);
+    boolean needToChangeRadius = false, needToChangeHeight = false, needToChangeLocation = false, needToChangeShade = false;
+    private int requestCodeForPermissions = 123;
 
-    public static float clamp(float val, float min, float max) {
+    private static float clamp(float val, float min, float max) {
         return Math.max(min, Math.min(max, val));
     }
 
-    public void androidM() {
+    public void androidMPermissionsCheck() {
+        Intent intent = null;
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                     Uri.parse("package:" + getPackageName()));
-            startActivityForResult(intent, 123);
-
         }
+        if (intent != null)
+            startActivityForResult(intent, requestCodeForPermissions);
 
-    }
-
-
-    @Override
-    protected void onDestroy() {
-        if (donationProcessor != null) donationProcessor.destroy();
-        super.onDestroy();
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (!donationProcessor.isOfAnInterest(requestCode, resultCode, data))
-            if (requestCode == 123) {
-                if (Build.VERSION.SDK_INT >= 23)
-                    if (!android.provider.Settings.canDrawOverlays(this)) {
-                        Toast.makeText(this, "Couldn't get the permission, terminating process", Toast.LENGTH_LONG).show();
-                        finish();
-                    }
-            }
     }
 
     public boolean checkNotificationEnabled() {
         return !NotificationManagerCompat.getEnabledListenerPackages(getApplicationContext()).contains(getPackageName());
     }
 
+    @SuppressWarnings("deprecation")
+    //Starting from Android 8, getRunning services is deprecated but it will still return the app's own services
     private boolean isServiceRunning() {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-        for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (NotificationService.class.getName().equals(service.service.getClassName())) {
-                return true;
+        if (manager != null)
+            for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+                if (NotificationService.class.getName().equals(service.service.getClassName())) {
+                    return true;
+                }
             }
-        }
         return false;
     }
 
     private boolean checkRequirements() {
         if (VERSION.SDK_INT >= 23) {
-
             if (!Settings.canDrawOverlays(getApplicationContext())) {
                 new Builder(this)
-                        .setMessage("Starting from Android 6, " + getResources().getString(R.string.app_name) + " needs permission to display pop-ups on top of other apps. Tap on \"enable\" to fix the problem")
-                        .setPositiveButton("Enable", new OnClickListener() {
+                        .setTitle(R.string.screen_overlay_permission)
+                        .setMessage(R.string.screen_overlay_permission_message)
+                        .setPositiveButton(R.string.enable, new OnClickListener() {
                             public void onClick(DialogInterface dialog, int which) {
-                                androidM();
+                                androidMPermissionsCheck();
                             }
                         })
                         .setCancelable(false)
@@ -136,9 +126,9 @@ public class MainActivity extends Activity {
 
         if (checkNotificationEnabled()) {
             new Builder(this)
-
-                    .setMessage("Please give this app the permission to read notifications")
-                    .setPositiveButton("Enable", new OnClickListener() {
+                    .setTitle(R.string.grant_permission)
+                    .setMessage(R.string.read_notification_request)
+                    .setPositiveButton(R.string.enable, new OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
                             startActivity(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"));
                         }
@@ -154,36 +144,29 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-
         setContentView(R.layout.activity_main);
         checkRequirements();
         checkService();
-//
-//        AdView mAdView = (AdView) findViewById(R.id.adView);
-//        AdRequest adRequest = new AdRequest.Builder().build();
-//        mAdView.loadAd(adRequest);
+
         findViewById(R.id.container).requestFocus();
 
         if (VERSION.SDK_INT >= VERSION_CODES.LOLLIPOP) {
             findViewById(R.id.preview).setClipToOutline(true);
         } else findViewById(R.id.test).setVisibility(View.GONE);
 
-        ImageView wallpaper = (ImageView) findViewById(R.id.wallpaper);
+        @SuppressLint("WrongViewCast") final View parentOfWallpaper = (View) findViewById(R.id.wallpaper).getParent();
 
-        final View v = (View) wallpaper.getParent();
-
-        v.getViewTreeObserver().addOnGlobalLayoutListener(new OnGlobalLayoutListener() {
+        parentOfWallpaper.getViewTreeObserver().addOnGlobalLayoutListener(new OnGlobalLayoutListener() {
             @Override
             public void onGlobalLayout() {
-                v.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                parentOfWallpaper.getViewTreeObserver().removeOnGlobalLayoutListener(this);
                 init();
 
 
             }
         });
 
-        Switch master = (Switch) findViewById(R.id.master);
+        SwitchCompat master = findViewById(R.id.master);
         //yes onClick not onChecked
         master.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -191,68 +174,59 @@ public class MainActivity extends Activity {
                 if (checkRequirements()) {
                     startActivity(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"));
                     if (hint != null) hint.cancel();
-                    hint = Toast.makeText(getApplicationContext(), "Toggle AchievementUnlocked!", Toast.LENGTH_LONG);
+                    hint = Toast.makeText(getApplicationContext(), R.string.toggle_au, Toast.LENGTH_LONG);
                     hint.show();
                 }
             }
         });
 
-        final BeatingImageView heart = (BeatingImageView) findViewById(R.id.heart);
+        final BeatingImageView heart = findViewById(R.id.heart);
         heart.setColorFilter(ContextCompat.getColor(getApplicationContext(), R.color.accent_fg));
 
-        final ImageView wow = (ImageView) findViewById(R.id.wow);
+        final ImageView wow = findViewById(R.id.wow);
         wow.setColorFilter(ContextCompat.getColor(getApplicationContext(), R.color.accent_fg));
-        final ScrollView scrollView = ((ScrollView) findViewById(R.id.scrollView));
+        final ScrollView scrollView = (findViewById(R.id.scrollView));
         scrollView.getViewTreeObserver().addOnScrollChangedListener(new OnScrollChangedListener() {
             @Override
             public void onScrollChanged() {
                 int scrollY = scrollView.getScrollY();
-                heart.beatTheHeart(scrollY);
+                heart.beatTheHeart();
                 wow.setRotation(scrollY / 10f);
             }
         });
 
         updateBlackList();
 
-//show immersive, edge-to-edge ads
-        final View mainView = findViewById(R.id.main);
-        mainView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-            @Override
-            public void onGlobalLayout() {
-                mainView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                //adview supplies false width measurements on landscape orientation, so don't bother
-                if (getResources().getConfiguration().orientation == ORIENTATION_LANDSCAPE) return;
-
-                float max = getResources().getDimension(R.dimen.max_width);
-                float w = Math.min(max, mainView.getMeasuredWidth());
-                View adView = findViewById(R.id.adView);
-                float scale = w / adView.getMeasuredWidth() * 1f;
-
-                if (scale < 1f || (scale * adView.getMeasuredWidth()) > max) return;
-                adView.setScaleX(scale);
-                adView.setScaleY(scale);
-
-                View adCard = findViewById(R.id.adCard);
-                adCard.getLayoutParams().height *= scale;
-
-                adCard.requestLayout();
-
+        if (savedInstanceState == null) {
+            Bundle bundle = getIntent().getExtras();
+            if (bundle != null) {
+                if (bundle.containsKey(pendingIntentExtra)) {
+                    boolean fromNotification = bundle.getBoolean("pendingIntentExtra", false);
+                    if (fromNotification) {
+                        scrollView.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                View target = findViewById(R.id.persistent);
+                                if (target != null)
+                                    scrollView.smoothScrollTo(0, target.getTop() + target.getHeight());
+                            }
+                        }, 300);
+                    }
+                }
             }
-        });
-    }
+        }
 
+    }
 
     @Override
     protected void onResume() {
         super.onResume();
         checkService();
         refreshPreview();
-        if (donationProcessor != null) donationProcessor.onResume();
     }
 
     private void checkService() {
-
-        Switch master = (Switch) findViewById(R.id.master);
+        final SwitchCompat master = findViewById(R.id.master);
         boolean runningService = isServiceRunning();
         boolean settingsToggle = NotificationManagerCompat.getEnabledListenerPackages(getApplicationContext()).contains(getApplicationContext().getPackageName());
         if (!runningService && settingsToggle) {
@@ -264,14 +238,14 @@ public class MainActivity extends Activity {
         }
         runningService = isServiceRunning();
 
-        if (runningService) {
-            master.setText(running);
+        String status = getString(runningService ? R.string.service_is_running : R.string.service_is_not_running);
 
+        if (runningService) {
+            master.setText(status);
         } else {
-            master.setText(runningNot);
+            master.setText(status);
         }
         master.setChecked(runningService);
-
     }
 
     private static int convertDpToPixel(float dp) {
@@ -281,12 +255,13 @@ public class MainActivity extends Activity {
     }
 
     private void init() {
-        Switch top = ((Switch) findViewById(R.id.top));
-        Switch rounded = ((Switch) findViewById(R.id.rounded));
-        Switch large = ((Switch) findViewById(R.id.large));
-        Switch dismiss = ((Switch) findViewById(R.id.swipeToDismiss));
-        Switch clickable = ((Switch) findViewById(R.id.clickable));
-        Switch persistent = ((Switch) findViewById(R.id.persistent));
+        SwitchCompat top = findViewById(R.id.top);
+        SwitchCompat rounded = findViewById(R.id.rounded);
+        SwitchCompat large = findViewById(R.id.large);
+        SwitchCompat shadedIcon = findViewById(R.id.shadedIcon);
+        SwitchCompat dismiss = findViewById(R.id.swipeToDismiss);
+        SwitchCompat clickable = findViewById(R.id.clickable);
+        SwitchCompat persistent = findViewById(R.id.persistent);
 
 
         boolean topValue = getSharedPreferences("settings", Context.MODE_PRIVATE).getBoolean("top", isTop);
@@ -295,6 +270,7 @@ public class MainActivity extends Activity {
         boolean dismissValue = getSharedPreferences("settings", Context.MODE_PRIVATE).getBoolean("dismiss", true);
         boolean clickableValue = getSharedPreferences("settings", Context.MODE_PRIVATE).getBoolean("clickable", true);
         boolean persistentValue = getSharedPreferences("settings", Context.MODE_PRIVATE).getBoolean("persistent", true);
+        boolean shadedIconValue = getSharedPreferences("settings", Context.MODE_PRIVATE).getBoolean("shadedIcon", true);
 
 
         top.setChecked(topValue);
@@ -302,6 +278,9 @@ public class MainActivity extends Activity {
         large.setChecked(largeValue);
         dismiss.setChecked(dismissValue);
         clickable.setChecked(clickableValue);
+        shadedIcon.setChecked(shadedIconValue);
+
+        toggleShade(shadedIconValue);
         toggleRounded(roundedValue);
         toggleLarge(largeValue);
         toggleTop(topValue);
@@ -309,65 +288,58 @@ public class MainActivity extends Activity {
         large.setOnCheckedChangeListener(new OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-
-                getSharedPreferences("settings", Context.MODE_PRIVATE).edit().putBoolean("large", isChecked).apply();
+                getSharedPreferences("settings", Context.MODE_PRIVATE).edit().putBoolean("large", isChecked).commit();
                 toggleLarge(isChecked);
-
             }
         });
         rounded.setOnCheckedChangeListener(new OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                getSharedPreferences("settings", Context.MODE_PRIVATE).edit().putBoolean("rounded", isChecked).apply();
+                getSharedPreferences("settings", Context.MODE_PRIVATE).edit().putBoolean("rounded", isChecked).commit();
                 toggleRounded(isChecked);
             }
         });
-
         top.setOnCheckedChangeListener(new OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                getSharedPreferences("settings", Context.MODE_PRIVATE).edit().putBoolean("top", isChecked).apply();
+                getSharedPreferences("settings", Context.MODE_PRIVATE).edit().putBoolean("top", isChecked).commit();
                 toggleTop(isChecked);
-
             }
         });
-
         dismiss.setOnCheckedChangeListener(new OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                getSharedPreferences("settings", Context.MODE_PRIVATE).edit().putBoolean("dismiss", isChecked).apply();
-
+                getSharedPreferences("settings", Context.MODE_PRIVATE).edit().putBoolean("dismiss", isChecked).commit();
             }
         });
         clickable.setOnCheckedChangeListener(new OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                getSharedPreferences("settings", Context.MODE_PRIVATE).edit().putBoolean("clickable", isChecked).apply();
-
+                getSharedPreferences("settings", Context.MODE_PRIVATE).edit().putBoolean("clickable", isChecked).commit();
             }
         });
         persistent.setOnCheckedChangeListener(new OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-
-                getSharedPreferences("settings", Context.MODE_PRIVATE).edit().putBoolean("persistent", isChecked).apply();
-
+                getSharedPreferences("settings", Context.MODE_PRIVATE).edit().putBoolean("persistent", isChecked).commit();
                 stopService(new Intent(MainActivity.this, NotificationService.class));
-
                 startService(new Intent(MainActivity.this, NotificationService.class));
-
-
+            }
+        });
+        shadedIcon.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                getSharedPreferences("settings", Context.MODE_PRIVATE).edit().putBoolean("shadedIcon", isChecked).commit();
+                toggleShade(isChecked);
             }
         });
 
-
-        donationProcessor = new DonationProcessor().bindActivity(this);
-        final ImageView addBlackList = (ImageView) findViewById(R.id.addBlackList);
+        final ImageView addBlackList = findViewById(R.id.addBlackList);
         addBlackList.setTag(false);
-        addBlackList.getBackground().setColorFilter(ContextCompat.getColor(getApplicationContext(), R.color.bottom_chin_fab_inactive), Mode.SRC_IN);
+        addBlackList.getBackground().setColorFilter(getResources().getColor(R.color.bottom_chin_fab_inactive), Mode.SRC_IN);
         addBlackList.setRotation(45f);
-        addBlackList.setColorFilter(ContextCompat.getColor(getApplicationContext(), R.color.bottom_chin_fab_icon), Mode.SRC_IN);
-        final EditText blackListedPhrases = (EditText) findViewById(R.id.blackListedPhrases);
+        addBlackList.setColorFilter(getResources().getColor(R.color.bottom_chin_fab_icon), Mode.SRC_IN);
+        final AppCompatEditText blackListedPhrases = findViewById(R.id.blackListedPhrases);
         blackListedPhrases.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -389,10 +361,10 @@ public class MainActivity extends Activity {
                         } else
                             addBlackList.animate().setInterpolator(interpolator).rotation(0f).start();
 
-                        fromBg = ContextCompat.getColor(getApplicationContext(), R.color.bottom_chin_fab_inactive);
-                        toBg = ContextCompat.getColor(getApplicationContext(), R.color.accent);
-                        fromIcon = ContextCompat.getColor(getApplicationContext(), R.color.bottom_chin_fab_icon);
-                        toIcon = ContextCompat.getColor(getApplicationContext(), R.color.accent_fg);
+                        fromBg = getResources().getColor(R.color.bottom_chin_fab_inactive);
+                        toBg = getResources().getColor(R.color.accent);
+                        fromIcon = getResources().getColor(R.color.bottom_chin_fab_icon);
+                        toIcon = getResources().getColor(R.color.accent_fg);
                     }
                 } else {
                     if (addBlackList.getRotation() != 45) {
@@ -400,10 +372,10 @@ public class MainActivity extends Activity {
                             addBlackList.animate().translationZ(0f).setInterpolator(interpolator).rotation(45f).start();
                         } else
                             addBlackList.animate().setInterpolator(interpolator).rotation(45f).start();
-                        toBg = ContextCompat.getColor(getApplicationContext(), R.color.bottom_chin_fab_inactive);
-                        fromBg = ContextCompat.getColor(getApplicationContext(), R.color.accent);
-                        toIcon = ContextCompat.getColor(getApplicationContext(), R.color.bottom_chin_fab_icon);
-                        fromIcon = ContextCompat.getColor(getApplicationContext(), R.color.accent_fg);
+                        toBg = getResources().getColor(R.color.bottom_chin_fab_inactive);
+                        fromBg = getResources().getColor(R.color.accent);
+                        toIcon = getResources().getColor(R.color.bottom_chin_fab_icon);
+                        fromIcon = getResources().getColor(R.color.accent_fg);
                     }
                 }
                 if ((fromBg != -1 || toBg != -1) && (fromIcon != -1 || toIcon != -1) && !(boolean) addBlackList.getTag()) {
@@ -497,7 +469,7 @@ public class MainActivity extends Activity {
         final String previousValues = preferences.getString("blackList", null);
 
 
-        LinearLayout blackListEntries = (LinearLayout) findViewById(R.id.blackListEntries);
+        LinearLayout blackListEntries = findViewById(R.id.blackListEntries);
         TransitionManager.beginDelayedTransition(blackListEntries);
         blackListEntries.setVisibility(View.GONE);
         if (previousValues == null) {
@@ -551,7 +523,6 @@ public class MainActivity extends Activity {
             if (!(boolean) blackListEntries.getChildAt(i).getTag()) {
                 blackListEntries.removeView(blackListEntries.getChildAt(i));
             }
-
         }
         blackListEntries.setVisibility(View.VISIBLE);
 
@@ -563,13 +534,13 @@ public class MainActivity extends Activity {
 
     private TextView getTextViewForBlackList(final String text) {
         TextView textView = new TextView(getApplicationContext());
-        textView.setTextColor(ContextCompat.getColor(getApplicationContext(), R.color.accent_fg));
+        textView.setTextColor(getResources().getColor(R.color.accent_fg));
         textView.setText(text);
 
         if (isRegEx(text)) {
             textView.setText(text.substring("regex ".length()));
-            Drawable regexDrawable = ContextCompat.getDrawable(getApplicationContext(), R.drawable.regex);
-            regexDrawable.setColorFilter(ContextCompat.getColor(getApplicationContext(), R.color.accent_fg), Mode.SRC_IN);
+            Drawable regexDrawable = getResources().getDrawable(regex);
+            regexDrawable.setColorFilter(getResources().getColor(R.color.accent_fg), Mode.SRC_IN);
             textView.setCompoundDrawablesWithIntrinsicBounds(regexDrawable, null, null, null);
             textView.setCompoundDrawablePadding(convertDpToPixel(5));
         }
@@ -593,14 +564,14 @@ public class MainActivity extends Activity {
                     }
                     newValue = previousValue.replace("\n" + text, "");
                 }
-                preferences.edit().putString("blackList", newValue).apply();
+                preferences.edit().putString("blackList", newValue).commit();
 
                 updateBlackList();
                 return true;
             }
         });
-        Drawable bg = ContextCompat.getDrawable(getApplicationContext(), R.drawable.chip);
-        bg.setColorFilter(ContextCompat.getColor(getApplicationContext(), R.color.accent), Mode.SRC);
+        Drawable bg = getResources().getDrawable(R.drawable.chip);
+        bg.setColorFilter(getResources().getColor(R.color.accent), Mode.SRC);
         textView.setBackground(bg);
         textView.setPadding(convertDpToPixel(10), convertDpToPixel(10), convertDpToPixel(10), convertDpToPixel(10));
         MarginLayoutParams layoutParams = new LayoutParams(-2, -2);
@@ -610,8 +581,12 @@ public class MainActivity extends Activity {
         return textView;
     }
 
-    //You can delete this part since it's for donation handling
-    DonationProcessor donationProcessor;
+    private void toggleShade(boolean isChecked) {
+        isShaded = isChecked;
+        needToChangeShade = true;
+        refreshPreview();
+    }
+
 
     private void toggleRounded(boolean isChecked) {
         isRounded = isChecked;
@@ -632,6 +607,7 @@ public class MainActivity extends Activity {
     }
 
     private void setBackground(View v, Drawable d) {
+        if (v == null) return;
         v.setBackground(d);
     }
 
@@ -644,28 +620,28 @@ public class MainActivity extends Activity {
     }
 
     public void test(View v) {
-
         if (checkRequirements()) {
+            MainActivity.createNotificationChannels(this);
+            NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, MainActivity.testChannelId);
+
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(getApplicationContext());
             NotificationCompat.Builder allSet =
-                    new NotificationCompat.Builder(this)
+                    notificationBuilder
                             .setSmallIcon(R.drawable.ic_mood).setColor(wallpaperColor)
-                            .setContentTitle("You're all set; enjoy");
-
+                            .setContentTitle(getString(R.string.all_set))
+                            .setAutoCancel(true);
             NotificationCompat.Builder morph =
-                    new NotificationCompat.Builder(this).setColor(ContextCompat.getColor(getApplicationContext(), R.color.accent))
+                    notificationBuilder
+                            .setColor(ContextCompat.getColor(getApplicationContext(), R.color.accent))
                             .setSmallIcon(R.drawable.ic_mood)
-                            .setContentTitle("Did you know?")
-                            .setContentText("Popups can scroll if the text is too long");
-            NotificationManager notificationManager =
-                    (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-
+                            .setContentTitle(getString(R.string.did_you_know))
+                            .setContentText(getString(R.string.popups_scroll_text_if_long)).setAutoCancel(true);
             notificationManager.cancel(0);
             notificationManager.cancel(1);
             notificationManager.notify(0, morph.build());
             notificationManager.notify(1, allSet.build());
-
-
         }
+
     }
 
     public void goToDarkion(View v) {
@@ -683,46 +659,70 @@ public class MainActivity extends Activity {
         if (isLarge) {
             initialSize = (int) getResources().getDimension(R.dimen.large);
         } else {
-            initialSize = (int) getResources().getDimension(R.dimen.small);
+            initialSize = (int) getResources().getDimension(small);
         }
-        animateLocation();
 
+        String permission = android.Manifest.permission.READ_EXTERNAL_STORAGE;
+        int res = checkCallingOrSelfPermission(permission);
+        if (res == PackageManager.PERMISSION_GRANTED) {
+            Bitmap bitmap = ((BitmapDrawable) WallpaperManager.getInstance(this).getDrawable()).getBitmap();
+            ImageView wallpaper = findViewById(R.id.wallpaper);
+            wallpaper.setImageBitmap(bitmap);
+            Palette.from(bitmap).generate(new Palette.PaletteAsyncListener() {
+                public void onGenerated(@NonNull Palette palette) {
+                    initPreview(palette);
+                }
+            });
+        } else initPreview(null);
+
+    }
+
+    private void initPreview(@Nullable Palette palette) {
+        int textColor, iconBG;
+        if (palette != null && palette.getVibrantSwatch() != null) {
+            textColor = palette.getVibrantSwatch().getTitleTextColor();
+        } else textColor = getResources().getColor(R.color.text);
+        ImageView icon = findViewById(R.id.achievement_icon);
+
+        iconBG = Color.argb(notificationIconBgAlpha, Color.red(textColor), Color.green(textColor), Color.blue(textColor));
+        icon.setColorFilter(Color.rgb(Color.red(textColor), Color.green(textColor), Color.blue(textColor)), PorterDuff.Mode.SRC_IN);
+        ((TextView) findViewById(R.id.title)).setTextColor(Color.rgb(Color.red(textColor), Color.green(textColor), Color.blue(textColor)));
+        ((TextView) findViewById(R.id.subtitle)).setTextColor(Color.argb(180, Color.red(textColor), Color.green(textColor), Color.blue(textColor)));
+
+
+        setIconBg(iconBG);
+        wallpaperColor = palette != null ? palette.getVibrantColor(ContextCompat.getColor(getApplicationContext(), R.color.bg)) : getResources().getColor(R.color.card);
+        setContainerBg(wallpaperColor);
+
+        animateShade();
+        animateLocation();
         animateCorner();
         animateHeight();
-        Bitmap bitmap = ((BitmapDrawable) WallpaperManager.getInstance(this).getDrawable()).getBitmap();
-        ImageView wallpaper = (ImageView) findViewById(R.id.wallpaper);
-        wallpaper.setImageBitmap(bitmap);
-        Palette.from(bitmap).generate(new Palette.PaletteAsyncListener() {
-            public void onGenerated(Palette palette) {
-                int textColor = Color.BLACK, iconBG;
-                try {
-                    if (palette.getVibrantSwatch() != null) {
-                        textColor = palette.getVibrantSwatch().getTitleTextColor();
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                ImageView icon = (ImageView) findViewById(R.id.achievement_icon);
-
-                iconBG = Color.argb(notificationIconBgAlpha, Color.red(textColor), Color.green(textColor), Color.blue(textColor));
-                icon.setColorFilter(Color.rgb(Color.red(textColor), Color.green(textColor), Color.blue(textColor)), PorterDuff.Mode.SRC_IN);
-                ((TextView) findViewById(R.id.title)).setTextColor(Color.rgb(Color.red(textColor), Color.green(textColor), Color.blue(textColor)));
-                ((TextView) findViewById(R.id.subtitle)).setTextColor(Color.argb(180, Color.red(textColor), Color.green(textColor), Color.blue(textColor)));
-
-
-                setIconBg(iconBG);
-                wallpaperColor = palette.getVibrantColor(ContextCompat.getColor(getApplicationContext(), R.color.bg));
-                setContainerBg(wallpaperColor);
-
-
-            }
-
-
-        });
     }
 
     public static int notificationIconBgAlpha = 25;
     int wallpaperColor;
+
+    private void animateShade() {
+        if (!needToChangeShade) return;
+        needToChangeShade = false;
+
+        final View iconBg = findViewById(R.id.achievement_icon_bg);
+        final TranslationDrawable iconBgDrawable = (TranslationDrawable) iconBg.getBackground();
+
+        ValueAnimator valueAnimator = ValueAnimator.ofFloat(isShaded ? -iconBg.getMeasuredHeight() : 0, isShaded ? 0 : iconBg.getMeasuredHeight());
+        valueAnimator.addUpdateListener(new AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                iconBgDrawable.setTranslationY((float) animation.getAnimatedValue());
+                iconBgDrawable.invalidateSelf();
+            }
+        });
+        valueAnimator.setInterpolator(interpolator);
+        valueAnimator.start();
+
+
+    }
 
     private void animateHeight() {
         if (!needToChangeHeight) return;
@@ -732,7 +732,7 @@ public class MainActivity extends Activity {
         int small = (int) getResources().getDimension(R.dimen.small);
 
         final View container = findViewById(R.id.container);
-        final ImageView icon = (ImageView) findViewById(R.id.achievement_icon);
+        final ImageView icon = findViewById(R.id.achievement_icon);
 
 
         ValueAnimator valueAnimator = ValueAnimator.ofInt(container.getMeasuredHeight(), isLarge ? large : small);
@@ -741,7 +741,6 @@ public class MainActivity extends Activity {
             public void onAnimationUpdate(ValueAnimator animation) {
                 container.getLayoutParams().height = (int) animation.getAnimatedValue();
                 icon.getLayoutParams().height = icon.getLayoutParams().width = ((View) icon.getParent()).getLayoutParams().height = ((View) icon.getParent()).getLayoutParams().width = (int) animation.getAnimatedValue();
-
                 container.requestLayout();
                 if (!needToChangeLocation) {
                     if (!isTop) {
@@ -800,8 +799,8 @@ public class MainActivity extends Activity {
         valueAnimator.start();
     }
 
-    private GradientDrawable getIconBg() {
-        GradientDrawable iconBackground = new GradientDrawable();
+    private TranslationDrawable getIconBg() {
+        TranslationDrawable iconBackground = new TranslationDrawable();
         if (isRounded)
             iconBackground.setCornerRadius(initialSize / 2);
         else
@@ -811,7 +810,9 @@ public class MainActivity extends Activity {
 
     private void setIconBg(int color) {
         View icon = findViewById(R.id.achievement_icon_bg);
-        GradientDrawable iconBackground = getIconBg();
+        //  Drawable bgDrawable = icon.getBackground();
+
+        TranslationDrawable iconBackground = getIconBg();
         iconBackground.setColor(color);
         setBackground(icon, iconBackground);
     }
@@ -838,6 +839,23 @@ public class MainActivity extends Activity {
             container.setElevation(getResources().getDimensionPixelOffset(R.dimen.elevation));
         }
 
+    }
+
+    public static String testChannelId = "test", serviceChannelId = "service";
+    public static CharSequence testChannelName = "Test popups", serviceChannelName = "Notification Service";
+
+    public static void createNotificationChannels(@NonNull Context context) {
+        if (VERSION.SDK_INT >= 26) {
+            int importance = NotificationManager.IMPORTANCE_LOW;
+            NotificationChannel testNotificationChannel = new NotificationChannel(testChannelId, testChannelName, importance);
+            NotificationChannel serviceNotificationChannel = new NotificationChannel(serviceChannelId, serviceChannelName, importance);
+
+            NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (notificationManager != null) {
+                notificationManager.createNotificationChannel(testNotificationChannel);
+                notificationManager.createNotificationChannel(serviceNotificationChannel);
+            }
+        }
     }
 
 }

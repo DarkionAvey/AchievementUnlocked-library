@@ -1,15 +1,16 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 25
-    buildToolsVersion "25.0.0"
+    compileSdkVersion 27
+    buildToolsVersion '27.0.3'
 
     defaultConfig {
         applicationId "net.darkion.achievementUnlockedApp"
         minSdkVersion 19
-        targetSdkVersion 25
-        versionCode 10
-        versionName "1.3"
+        targetSdkVersion 27
+        versionCode 11
+        vectorDrawables.useSupportLibrary = true
+        versionName "1.4"
     }
     buildTypes {
         release {
@@ -20,10 +21,8 @@ android {
 }
 
 dependencies {
-    compile 'com.android.support:palette-v7:25.3.1'
-    compile 'com.android.support:appcompat-v7:25.3.1'
-    compile 'com.google.android.gms:play-services-ads:10.2.1'
-
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'com.android.support:palette-v7:27.1.1'
 }
 repositories {
 

@@ -2,13 +2,17 @@ package net.darkion.achievementUnlockedApp;
 
 import android.animation.TimeInterpolator;
 
-class LogDecelerateInterpolator implements TimeInterpolator {
+
+/**
+ * Copied from launcher3
+ */
+public class LogDecelerateInterpolator implements TimeInterpolator {
 
     private final float mLogScale;
     private int mBase;
     private int mDrift;
 
-     LogDecelerateInterpolator(int base, int drift) {
+    LogDecelerateInterpolator(int base, int drift) {
         mBase = base;
         mDrift = drift;
 

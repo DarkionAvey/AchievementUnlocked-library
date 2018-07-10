@@ -50,3 +50,10 @@ achievementUnlocked.show(data,data1,data2,data3);
 </li>
 </ol> 
 
+<h3>Phones with large status bars and/or Android Oreo+</h2>
+
+```java
+achievementUnlocked.setNotchMode(Integer statusBarHeight)
+```
+
+Use the above method to vertically shift top-aligned popups. 'statusBarHeight' will be the vertical shift of the popup. If you supply a null value, 'status_bar_height' dimen from 'android' package will be used instead. You don't need to use the ViewCompat.onApplyWindowInsets to get the statusbar height since the popup will be drawn over all apps and using the hardcoded status bar height is sufficient. This is the default behaviour on devices running Android Oreo+ since it prevents apps from drawing over the status bar. 

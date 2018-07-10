@@ -4,36 +4,37 @@
 <a href="https://github.com/DarkionAvey/AchievementUnlocked-library/blob/master/app/app-release.apk?raw=true">Download APK (for Android KitKat+)</a>
 
 <h3>License</h3>
-<p>GPL (App)</p>
+<p>GPL (for the companion App)</p>
 <p>Library (MIT)</p>
+
 <h3>How to add to my app</h3>
 <p>Copy <a href="https://raw.githubusercontent.com/DarkionAvey/AchievementUnlocked-library/master/app/src/main/java/net/darkion/achievementUnlockedApp/AchievementUnlocked.java">AchievementUnlocked.Java</a> class to your app. That's it!</p> <br>
-<h3>How to pop pop-ups</h3>
+<h3>How to show popups</h3>
 <ol>
-  <li>Initialise achievementUnlocked object
+  <li>Initialize achievementUnlocked object
  
 ```java
 AchievementUnlocked achievementUnlocked = new AchievementUnlocked(getApplicationContext());
 ```
 </li>
-  <li>Customise appearance
+  <li>Customize appearance
   
 ```java
   achievementUnlocked.setRounded(rounded).setLarge(large).setTopAligned(top).setDismissible(dismiss)
 ```   
 </li>
-<li>Supply the aforementioned object with AcheievementData
+<li>Supply the aforementioned object with (array of) AcheievementData
 
 ```java
 
-AchievementData data = new AchievementData();
-data.setTitle(title); 
-data.setSubTitle(title);
-data.setIcon(iconFinal);  
-data.setTextColor(textColor);
-data.setIconBackgroundColor(iconBG);
-data.setBackgroundColor(bg);
-data.setPopUpOnClickListener(new View.OnClickListener() {
+AchievementData data0 = new AchievementData();
+data0.setTitle(title); 
+data0.setSubTitle(title);
+data0.setIcon(iconFinal);  
+data0.setTextColor(textColor);
+data0.setIconBackgroundColor(iconBG);
+data0.setBackgroundColor(bg);
+data0.setPopUpOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                  
@@ -45,12 +46,12 @@ data.setPopUpOnClickListener(new View.OnClickListener() {
 <li>Pop your data!
 
 ```java
-achievementUnlocked.show(data,data1,data2,data3);
+achievementUnlocked.show(data0, data1, data2, data3);
 ```
 </li>
 </ol> 
 
-<h3>Phones with large status bars and/or Android Oreo+</h2>
+<h2>Phones with large status bars and/or Android Oreo+</h2>
 
 ```java
 achievementUnlocked.setNotchMode(Integer statusBarHeight)

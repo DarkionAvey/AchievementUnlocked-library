@@ -58,3 +58,13 @@ achievementUnlocked.setNotchMode(Integer statusBarHeight)
 ```
 
 Use the above method to vertically shift top-aligned popups. 'statusBarHeight' will be the vertical shift of the popup. If you supply a null value, 'status_bar_height' dimen from 'android' package will be used instead. You don't need to use the ViewCompat.setOnApplyWindowInsetsListener to get the statusbar height since the popup will be drawn over all apps and using the hardcoded status bar height is sufficient. This is the default behaviour on devices running Android Oreo+ since it prevents apps from drawing over the status bar. 
+
+<h2>New: control subtitle scrolling speed</h2>
+In the latest version, new method to control scrolling speed has been added. To set speed rate, use the code below:
+
+```java
+achievementUnlocked.setScrollingPxPerSeconds(float);
+```
+
+Higher values will result in faster scrolling. This method should be used alongside setReadingDelay method to assign rates that best fit your application nature
+

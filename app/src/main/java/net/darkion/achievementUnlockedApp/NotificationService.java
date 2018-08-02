@@ -17,6 +17,7 @@ import android.os.Build;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.service.notification.NotificationListenerService;
@@ -73,7 +74,8 @@ public class NotificationService extends NotificationListenerService {
 
             Notification mNotification = notificationBuilder
                     .setOngoing(true).setPriority(PRIORITY_MIN)
-                    .setSmallIcon(notification).setColor(getResources().getColor(R.color.accent))
+                    .setSmallIcon(notification)
+                    .setColor(getResources().getColor(R.color.accent))
                     .setCategory(CATEGORY_STATUS)
                     .setContentTitle("Service is running")
                     .setStyle(new NotificationCompat.BigTextStyle().bigText("Some ROMs such as MIUI and EMUI have aggressive RAM management to conserve battery life. Showing a persisting notification will prevent that. It is only recommended that you disable this if your phone is running vanilla Android. You can disable this from AU settings."))
@@ -124,14 +126,17 @@ public class NotificationService extends NotificationListenerService {
             if (powerManager != null && powerManager.isPowerSaveMode()) return;
 
         }
-
-        for (StatusBarNotification notification : getActiveNotifications()) {
-            registerNotification(notification);
-
-        }
-
-
+        mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                for (StatusBarNotification notification : getActiveNotifications()) {
+                    registerNotification(notification);
+                }
+            }
+        });
     }
+
+    final Handler mHandler = new Handler();
 
     //save toast for later use in future
     Toast toast;
@@ -448,17 +453,29 @@ public class NotificationService extends NotificationListenerService {
      */
     private void showNotification(final StatusBarNotification sbn) {
         initAchievement();
-
         final AchievementData data = new AchievementData();
         String subtitle = getText(sbn), title = getTitle(sbn);
 
+        //Don't bother
+        if ((subtitle == null || subtitle.isEmpty()) && (title == null || title.isEmpty())) return;
+
+        if ((title == null || title.isEmpty())) {
+            title = subtitle;
+            subtitle = null;
+        }
+
+
         data.setTitle(title);
         //Don't show same text
-        if (!title.equalsIgnoreCase(subtitle))
+        if (subtitle != null && !title.equalsIgnoreCase(subtitle))
             data.setSubtitle(subtitle);
         Drawable[] drawables = getIcon(sbn);
+
         final Drawable iconFinal = drawables[0];
         final Drawable packageIcon = drawables[1];
+
+        if (packageIcon == null) return;
+
         Bitmap bitmap = Bitmap.createBitmap(packageIcon.getIntrinsicWidth(), packageIcon.getIntrinsicHeight(), Bitmap.Config.ARGB_4444);
         Canvas canvas = new Canvas(bitmap);
         packageIcon.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
@@ -493,7 +510,8 @@ public class NotificationService extends NotificationListenerService {
                 data.setState(AchievementIconViewStates.SAME_DRAWABLE);
             }
         }
-        iconFinal.setColorFilter(getOpaqueColor(textColor), PorterDuff.Mode.SRC_IN);
+        if (iconFinal != null)
+            iconFinal.setColorFilter(getOpaqueColor(textColor), PorterDuff.Mode.SRC_IN);
 
         data.setIcon(iconFinal);
         data.setTextColor(textColor);
@@ -566,8 +584,10 @@ public class NotificationService extends NotificationListenerService {
                 if (iconId != -1)
                     try {
                         icon = getApplicationContext().createPackageContext(getPackageName(sbn), CONTEXT_IGNORE_SECURITY).getResources().getDrawable(iconId);
-                    } catch (PackageManager.NameNotFoundException e) {
-                        //ignore
+                    } catch (Exception e) {
+
+                        //ignore; possible exceptions:
+                        //PackageManager.NameNotFound AND Resources$NotFoundException
                     }
             } else {
                 icon = new BitmapDrawable(getApplicationContext().getResources(), bmp);
@@ -703,15 +723,14 @@ public class NotificationService extends NotificationListenerService {
         boolean large = settings.getBoolean("large", false);
         boolean dismiss = settings.getBoolean("dismiss", true);
 
+        achievementUnlocked.setReadingDelay(1700);
         achievementUnlocked.setRounded(rounded).setLarge(large).setTopAligned(top).setDismissible(dismiss);
     }
 
-    /**
-     * Called when user removes a notification from notifications area
-     */
     @Override
     public void onNotificationRemoved(StatusBarNotification sbn) {
-        super.onNotificationRemoved(sbn);
         removeNotification(sbn);
     }
+
+
 }

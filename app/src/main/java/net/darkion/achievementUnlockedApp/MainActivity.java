@@ -37,6 +37,9 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.view.OnApplyWindowInsetsListener;
+import android.support.v4.view.ViewCompat;
+import android.support.v4.view.WindowInsetsCompat;
 import android.support.v7.graphics.Palette;
 import android.support.v7.widget.AppCompatEditText;
 import android.support.v7.widget.SwitchCompat;
@@ -152,7 +155,13 @@ public class MainActivity extends Activity {
 
         if (VERSION.SDK_INT >= VERSION_CODES.LOLLIPOP) {
             findViewById(R.id.preview).setClipToOutline(true);
-        } else findViewById(R.id.test).setVisibility(View.GONE);
+        }
+        findViewById(R.id.test).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                test(v);
+            }
+        });
 
         @SuppressLint("WrongViewCast") final View parentOfWallpaper = (View) findViewById(R.id.wallpaper).getParent();
 
@@ -183,18 +192,21 @@ public class MainActivity extends Activity {
         final BeatingImageView heart = findViewById(R.id.heart);
         heart.setColorFilter(ContextCompat.getColor(getApplicationContext(), R.color.accent_fg));
 
+        final ScrollView scrollView = (findViewById(R.id.scrollView));
+
         final ImageView wow = findViewById(R.id.wow);
         wow.setColorFilter(ContextCompat.getColor(getApplicationContext(), R.color.accent_fg));
-        final ScrollView scrollView = (findViewById(R.id.scrollView));
-        scrollView.getViewTreeObserver().addOnScrollChangedListener(new OnScrollChangedListener() {
-            @Override
-            public void onScrollChanged() {
-                int scrollY = scrollView.getScrollY();
-                heart.beatTheHeart();
-                wow.setRotation(scrollY / 10f);
-            }
-        });
 
+        if (VERSION.SDK_INT >= 21) {
+            scrollView.getViewTreeObserver().addOnScrollChangedListener(new OnScrollChangedListener() {
+                @Override
+                public void onScrollChanged() {
+                    int scrollY = scrollView.getScrollY();
+                    heart.beatTheHeart();
+                    wow.setRotation(scrollY / 10f);
+                }
+            });
+        }
         updateBlackList();
 
         if (savedInstanceState == null) {
@@ -215,6 +227,20 @@ public class MainActivity extends Activity {
                 }
             }
         }
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), new OnApplyWindowInsetsListener() {
+            @Override
+            public WindowInsetsCompat onApplyWindowInsets(View v, WindowInsetsCompat insets) {
+                scrollView.setPadding(0, insets.getSystemWindowInsetTop(), 0, insets.getSystemWindowInsetBottom());
+                scrollView.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        scrollView.scrollTo(0, 0);
+                    }
+                });
+                return insets;
+            }
+        });
 
     }
 
@@ -622,26 +648,32 @@ public class MainActivity extends Activity {
     public void test(View v) {
         if (checkRequirements()) {
             MainActivity.createNotificationChannels(this);
-            NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, MainActivity.testChannelId);
 
-            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(getApplicationContext());
-            NotificationCompat.Builder allSet =
-                    notificationBuilder
-                            .setSmallIcon(R.drawable.ic_mood).setColor(wallpaperColor)
-                            .setContentTitle(getString(R.string.all_set))
-                            .setAutoCancel(true);
-            NotificationCompat.Builder morph =
-                    notificationBuilder
-                            .setColor(ContextCompat.getColor(getApplicationContext(), R.color.accent))
-                            .setSmallIcon(R.drawable.ic_mood)
-                            .setContentTitle(getString(R.string.did_you_know))
-                            .setContentText(getString(R.string.popups_scroll_text_if_long)).setAutoCancel(true);
-            notificationManager.cancel(0);
-            notificationManager.cancel(1);
-            notificationManager.notify(0, morph.build());
-            notificationManager.notify(1, allSet.build());
+            final NotificationManagerCompat notificationManager = NotificationManagerCompat.from(getApplicationContext());
+            final NotificationCompat.Builder allSet = new NotificationCompat.Builder(this, MainActivity.testChannelId)
+                    .setSmallIcon(VERSION.SDK_INT >= 21 ? R.drawable.ic_mood : R.drawable.notification)
+                    .setColor(wallpaperColor)
+                    .setContentTitle(getString(R.string.all_set))
+                    .setAutoCancel(true);
+
+            final NotificationCompat.Builder morph = new NotificationCompat.Builder(this, MainActivity.testChannelId)
+                    .setColor(ContextCompat.getColor(getApplicationContext(), R.color.accent))
+                    .setSmallIcon(VERSION.SDK_INT >= 21 ? R.drawable.ic_mood : R.drawable.notification)
+                    .setContentTitle(getString(R.string.did_you_know))
+                    .setContentText(getString(R.string.popups_scroll_text_if_long))
+                    .setAutoCancel(true);
+
+            notificationManager.cancel(R.string.did_you_know);
+            notificationManager.cancel(R.string.all_set);
+            notificationManager.notify(R.string.all_set, allSet.build());
+            notificationManager.notify(R.string.did_you_know, morph.build());
+
         }
 
+    }
+
+    public void goToStore(View v) {
+        //nothing to do here
     }
 
     public void goToDarkion(View v) {

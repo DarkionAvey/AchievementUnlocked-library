@@ -10,7 +10,7 @@ import android.widget.LinearLayout;
 public class BoundedLinearLayout extends LinearLayout {
 
     private final int mBoundedWidth;
-
+    private final static boolean ENABLED = false;
     private final int mBoundedHeight;
 
     public BoundedLinearLayout(Context context) {
@@ -29,17 +29,18 @@ public class BoundedLinearLayout extends LinearLayout {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        // Adjust width as necessary
-        int measuredWidth = MeasureSpec.getSize(widthMeasureSpec);
-        if (mBoundedWidth > 0 && mBoundedWidth < measuredWidth) {
-            int measureMode = MeasureSpec.getMode(widthMeasureSpec);
-            widthMeasureSpec = MeasureSpec.makeMeasureSpec(mBoundedWidth, measureMode);
-        }
-        // Adjust height as necessary
-        int measuredHeight = MeasureSpec.getSize(heightMeasureSpec);
-        if (mBoundedHeight > 0 && mBoundedHeight < measuredHeight) {
-            int measureMode = MeasureSpec.getMode(heightMeasureSpec);
-            heightMeasureSpec = MeasureSpec.makeMeasureSpec(mBoundedHeight, measureMode);
+        if (ENABLED) {  // Adjust width as necessary
+            int measuredWidth = MeasureSpec.getSize(widthMeasureSpec);
+            if (mBoundedWidth > 0 && mBoundedWidth < measuredWidth) {
+                int measureMode = MeasureSpec.getMode(widthMeasureSpec);
+                widthMeasureSpec = MeasureSpec.makeMeasureSpec(mBoundedWidth, measureMode);
+            }
+            // Adjust height as necessary
+            int measuredHeight = MeasureSpec.getSize(heightMeasureSpec);
+            if (mBoundedHeight > 0 && mBoundedHeight < measuredHeight) {
+                int measureMode = MeasureSpec.getMode(heightMeasureSpec);
+                heightMeasureSpec = MeasureSpec.makeMeasureSpec(mBoundedHeight, measureMode);
+            }
         }
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
     }

@@ -665,6 +665,7 @@ public class MainActivity extends Activity {
 
             notificationManager.cancel(R.string.did_you_know);
             notificationManager.cancel(R.string.all_set);
+
             notificationManager.notify(R.string.all_set, allSet.build());
             notificationManager.notify(R.string.did_you_know, morph.build());
 

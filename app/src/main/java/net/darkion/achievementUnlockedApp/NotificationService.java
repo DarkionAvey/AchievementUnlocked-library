@@ -723,7 +723,8 @@ public class NotificationService extends NotificationListenerService {
         boolean large = settings.getBoolean("large", false);
         boolean dismiss = settings.getBoolean("dismiss", true);
 
-        achievementUnlocked.setReadingDelay(1700);
+        achievementUnlocked.setReadingDelay(1000);
+        achievementUnlocked.setScrollingPxPerSeconds(70);
         achievementUnlocked.setRounded(rounded).setLarge(large).setTopAligned(top).setDismissible(dismiss);
     }
 

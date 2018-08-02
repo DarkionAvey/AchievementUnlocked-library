@@ -22,7 +22,6 @@ import android.os.PowerManager;
 import android.provider.Settings;
 import android.support.annotation.Nullable;
 import android.text.Editable;
-import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
@@ -36,6 +35,7 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.AnticipateInterpolator;
+import android.view.animation.LinearInterpolator;
 import android.view.animation.OvershootInterpolator;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -55,6 +55,10 @@ import static java.lang.Boolean.FALSE;
 /**
  * Basically an animated toast notification with queue support.
  * <p>
+ * It uses a set of invisible views (called 'fake') to measure
+ * the data before showing it to user. This similar to using measureText
+ * method but more accurate.
+ * <p>
  * Doesn't work with power-saving mode on unless you implement your
  * own valueAnimator class.
  * <p>
@@ -65,16 +69,13 @@ import static java.lang.Boolean.FALSE;
  * Don't forget to grant 'draw over apps' permission (SYSTEM_ALERT_WINDOW)
  * <p>
  * GPL
- * By DarkionAvey @ http://darkion.net/
+ * By Darkion Avey @ http://darkion.net/
  */
 @SuppressWarnings("unused")
-
 public class AchievementUnlocked {
     private int currentContainerWidth;
     //dimens
     private int smallSize, largeSize, elevation, paddingLarge, paddingSmall, translationY, margin;
-    //for debugging purposes
-    final static int animationMultiplier = 1;
     private int initialSize = -1;
     //indices of data iterator
     private int index = 0;
@@ -84,9 +85,9 @@ public class AchievementUnlocked {
     //achievements data
     private AchievementData[] achievements;
     private final OvershootInterpolator overshootInterpolator = new OvershootInterpolator();
-    private int readingDelay = 1500;
+    private int readingDelay = 1300;
     //animation interpolators
-    private final TimeInterpolator interpolator = new DeceleratingInterpolator(50);
+    private final static TimeInterpolator TIME_INTERPOLATOR = new DeceleratingInterpolator(50);
     private final AnticipateInterpolator anticipateInterpolator = new AnticipateInterpolator();
     private final TimeInterpolator accelerateInterpolator = new AccelerateInterpolator(50);
     private int matchParent;
@@ -104,12 +105,26 @@ public class AchievementUnlocked {
     private final int nonFocusable = WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
     private ViewGroup achievementLayout;
     private WindowManager.LayoutParams mainViewLP;
-    final boolean DEBUG = true;
+    private final boolean DEBUG = true;
     private static final String TAG = "AU";
+    private float mPxPerSeconds = 40;
 
     public AchievementUnlocked(Context context) {
         this.context = context;
         initGlobalFields();
+    }
+
+    /**
+     * Set how many pixels should be scrolled per second when
+     * the subtitle is scrollable (longer than screen width)
+     * <p>
+     * Default value is 40;
+     *
+     * @param PxPerSeconds higher values will result in faster
+     *                     scrolling
+     */
+    public void setScrollingPxPerSeconds(float PxPerSeconds) {
+        this.mPxPerSeconds = PxPerSeconds;
     }
 
     /**
@@ -708,9 +723,16 @@ public class AchievementUnlocked {
                 }
             }
         });
-        containerStretch.setInterpolator(interpolator);
-        containerStretch.setDuration(animationMultiplier * 300);
+        containerStretch.setInterpolator(TIME_INTERPOLATOR);
+        containerStretch.setDuration(getScaledDuration(300));
         return containerStretch;
+    }
+
+    /**
+     * For debugging purposes
+     */
+    static long getScaledDuration(int duration) {
+        return (long) (1f * duration);
     }
 
     private GradientDrawableWithColors getContainerBg() {
@@ -778,7 +800,7 @@ public class AchievementUnlocked {
                     container.setScaleY((float) animation.getAnimatedValue());
             }
         });
-        containerScale.setDuration(animationMultiplier * 250);
+        containerScale.setDuration(getScaledDuration(250));
         containerScale.setStartDelay(100);
         containerScale.setInterpolator(anticipateInterpolator);
         boolean scrimIsAvailable = alignTop && achievementLayout.getBackground() != null;
@@ -851,42 +873,6 @@ public class AchievementUnlocked {
     private AnimatorSet morphData() {
         AnimatorSet sets = new AnimatorSet();
         AchievementData data = achievements[index];
-
-        //Failed attempt to separate new lines in subtitle
-        //text into different popups
-
-//        String subtitleRaw = data.getSubtitle();
-//        String subtitles[] = null;
-//        int lines = getSubtitleLines(subtitleRaw);
-//        if (lines > 1)
-//            subtitles = subtitleRaw.split("\\r\\n|\\r|\\n");
-//
-//        AnimatorSet[] animatorSetArrayList = null;
-//        if (subtitles != null) {
-//            animatorSetArrayList = new AnimatorSet[lines];
-//            final boolean multiLine = data.isMultiLine();
-//            for (int i = 0; i < subtitles.length; i++) {
-//
-//                String s = subtitles[i];
-//                if (isBlank(s)) continue;
-//                AchievementData freshData = AchievementData.copyFrom(data);
-//                freshData.setMultiLine(true);
-//                freshData.setSubtitle(s);
-//                if (freshData.getCurrentMorphingLine() == null)
-//                    freshData.setCurrentMorphingLine(MorphingLine.FIRST);
-//                else if (i == subtitles.length - 1)
-//                    freshData.setCurrentMorphingLine(MorphingLine.LAST);
-//                else freshData.setCurrentMorphingLine(INTERMEDIATE);
-//
-//
-//                animatorSetArrayList[i] = animateData(freshData);
-//
-//            }
-//        }
-//        if (lines > 1 && animatorSetArrayList != null && allClear(animatorSetArrayList)) {
-//            sets.playSequentially((Animator[]) animatorSetArrayList);
-//        } else sets.play(animateData(achievements[index]));
-
         sets.play(animateData(achievements[index]));
         sets.addListener(new AnimatorListenerAdapter() {
             @Override
@@ -900,7 +886,6 @@ public class AchievementUnlocked {
             }
         });
         return sets;
-
     }
 
     private AnimatorSet animateData(final AchievementData data) {
@@ -947,8 +932,8 @@ public class AchievementUnlocked {
             });
 
             backgroundAnimators.play(iconBgColor).with(bgColor);
-            backgroundAnimators.setInterpolator(interpolator);
-            backgroundAnimators.setDuration(animationMultiplier * 300);
+            backgroundAnimators.setInterpolator(TIME_INTERPOLATOR);
+            backgroundAnimators.setDuration(getScaledDuration(300));
 
 
         }
@@ -960,8 +945,8 @@ public class AchievementUnlocked {
                 titleTextView.setAlpha(animation.getAnimatedFraction());
             }
         });
-        titleIn.setDuration(animationMultiplier * 300);
-        titleIn.setInterpolator(interpolator);
+        titleIn.setDuration(getScaledDuration(300));
+        titleIn.setInterpolator(TIME_INTERPOLATOR);
 
         titleOut = ObjectAnimator.ofFloat(titleTextView, View.TRANSLATION_Y, 0, translationY);
         titleOut.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
@@ -973,11 +958,28 @@ public class AchievementUnlocked {
         });
         titleOut.setInterpolator(accelerateInterpolator);
 
+        final boolean dataHasSubtitle = dataHasSubtitle(data);
+        //indicates that scrolling is needed
+        final boolean overFlow = (matchParent) < getTargetWidth(data);
+        final int startScrollingDelay = dataHasSubtitle ? 800 : 0;
+        final int scrollDistance = overFlow ? Math.abs(getTargetWidth(data) - matchParent) : 0;
+        //if the text is scrolling, pause for a while at the end before collapsing
+        final int endReadingDelay = overFlow ? 400 : 0;
 
-        final int startScrollingDelay = 800;
+        final int duration;
+        if (overFlow) {
+            final float density = context.getResources().getDisplayMetrics().density;
+            float dpPerSec = mPxPerSeconds * density;
+            //if the scroll distance is short, then use standard readingDelay value since the animation
+            //will run too quickly and user won't be abel to read the contents
+            duration = scrollDistance <= matchParent / 4 ? readingDelay : Math.round(scrollDistance * 1000 / dpPerSec);
+        } else {
+            duration = readingDelay;
+        }
+
         ValueAnimator stretch = getContainerStretchAnimation(container.getMeasuredWidth(), getTargetWidth(data));
 
-        if (data.getSubtitle() != null) {
+        if (dataHasSubtitle) {
             subtitleIn = ObjectAnimator.ofFloat(subtitleTextView, View.TRANSLATION_Y, translationY, 0);
             subtitleIn.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                 @Override
@@ -986,38 +988,14 @@ public class AchievementUnlocked {
                     subtitleTextView.setAlpha(animation.getAnimatedFraction());
                 }
             });
-            subtitleIn.setInterpolator(interpolator);
-            subtitleIn.addListener(new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationStart(Animator animation) {
-                    super.onAnimationStart(animation);
-                    subtitleTextView.stopScrolling();
-
-                }
-
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    super.onAnimationEnd(animation);
-                    subtitleTextView.stopScrolling();
-                    if ((matchParent - initialSize) < getTargetWidth(data))
-                        new android.os.Handler().postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                subtitleTextView.startScrolling();
-
-                            }
-                        }, startScrollingDelay);
-
-
-                }
-            });
-            subtitleIn.setStartDelay(150);
-            subtitleIn.setInterpolator(interpolator);
-            subtitleIn.setDuration(animationMultiplier * 300);
+            subtitleIn.setInterpolator(TIME_INTERPOLATOR);
+            subtitleIn.setStartDelay(getScaledDuration(150));
+            subtitleIn.setInterpolator(TIME_INTERPOLATOR);
+            subtitleIn.setDuration(getScaledDuration(300));
         }
         //use previousWidth better than real-time measuring to increase performance
 
-        if (data.getSubtitle() != null) {
+        if (dataHasSubtitle) {
             AnimatorSet textViews = new AnimatorSet();
             //this null check is useful when seperating subtitle different lines
             //into different poups
@@ -1033,7 +1011,7 @@ public class AchievementUnlocked {
 
         }
         // inAnimation.setInterpolator(interpolator);
-        if (data.getSubtitle() != null) {
+        if (dataHasSubtitle) {
             subtitleOut = ObjectAnimator.ofFloat(subtitleTextView, View.TRANSLATION_Y, 0, translationY);
             subtitleOut.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                 @Override
@@ -1054,9 +1032,9 @@ public class AchievementUnlocked {
 
         }
 
-        if (data.getSubtitle() != null) {
+        if (dataHasSubtitle) {
             if (titleOut != null) {
-                titleOut.setStartDelay(150 * animationMultiplier);
+                titleOut.setStartDelay(getScaledDuration(150));
                 outAnimation.playTogether(subtitleOut, titleOut);
             } else outAnimation.play(subtitleOut);
         } else {
@@ -1080,6 +1058,7 @@ public class AchievementUnlocked {
                 if (manager != null && added)
                     manager.updateViewLayout(achievementLayout, mainViewLP);
                 subtitleTextView.setText(subtitle);
+                subtitleTextView.updateScroller(scrollDistance);
                 titleTextView.setText(title);
                 setTextColor(data.getTextColor());
             }
@@ -1087,17 +1066,14 @@ public class AchievementUnlocked {
 
         });
 
-
-        boolean isBig = getEndValue(container.getMeasuredWidth()) >= matchParent;
         ScrollTextView fake = (achievementLayout.findViewWithTag("subtitleFake"));
         fake.setText(data.getSubtitle());
-        int duration = readingDelay;
-        if ((matchParent) < getTargetWidth(data))
-            duration = fake.getDuration() + startScrollingDelay;
-        outAnimation.setStartDelay(duration);
-        outAnimation.setDuration(animationMultiplier * 300);
+
+        subtitleTextView.setDurations(getScaledDuration(duration + endReadingDelay), getScaledDuration(startScrollingDelay));
+        outAnimation.setStartDelay(getScaledDuration(duration + endReadingDelay + startScrollingDelay));
+        outAnimation.setDuration(getScaledDuration(300));
         result.playSequentially(inAnimation, outAnimation);
-        result.setInterpolator(interpolator);
+        result.setInterpolator(TIME_INTERPOLATOR);
         container.setTag(data);
         return result;
     }
@@ -1110,6 +1086,10 @@ public class AchievementUnlocked {
         scene.playSequentially(getEntranceAnimation(achievements[0]), morphData());
 
         scene.start();
+    }
+
+    private boolean dataHasSubtitle(AchievementData data) {
+        return data.getSubtitle() != null && data.getSubtitle().length() > 0 && !data.getSubtitle().isEmpty();
     }
 
     private AnimatorSet getEntranceAnimation(final AchievementData data) {
@@ -1125,7 +1105,7 @@ public class AchievementUnlocked {
                 container.setScaleY((float) animation.getAnimatedValue());
             }
         });
-        containerScale.setDuration(animationMultiplier * 250);
+        containerScale.setDuration(getScaledDuration(250));
         containerScale.setInterpolator(overshootInterpolator);
         boolean scrimIsAvailable = alignTop && achievementLayout.getBackground() != null;
         ObjectAnimator scrim = null;
@@ -1244,7 +1224,7 @@ public class AchievementUnlocked {
                         dismissRight = deltaX > 0;
                     }
                     if (dismiss) {
-                        ObjectAnimator translation = ObjectAnimator.ofFloat(container, View.TRANSLATION_X, container.getTranslationX(), 1.5f * (dismissRight ? container.getMeasuredWidth() : -container.getMeasuredWidth()));
+                        ObjectAnimator translation = ObjectAnimator.ofFloat(container, View.TRANSLATION_X, container.getTranslationX(), dismissRight ? container.getMeasuredWidth() : -container.getMeasuredWidth());
                         translation.addUpdateListener(new AnimatorUpdateListener() {
                             @Override
                             public void onAnimationUpdate(ValueAnimator animation) {
@@ -1259,7 +1239,7 @@ public class AchievementUnlocked {
                                 if (end != null) end.run();
                             }
                         });
-                        translation.setInterpolator(interpolator);
+                        translation.setInterpolator(TIME_INTERPOLATOR);
                         translation.setDuration(mAnimationTime);
                         translation.start();
                         dismissed = true;
@@ -1272,7 +1252,7 @@ public class AchievementUnlocked {
                             }
                         });
                         translation.setDuration(mAnimationTime);
-                        translation.setInterpolator(interpolator);
+                        translation.setInterpolator(TIME_INTERPOLATOR);
                         translation.start();
 
                         dismissed = false;
@@ -1470,7 +1450,11 @@ abstract class AchievementListenerAdapter implements AchievementListener {
  * Ticker text view used for subtitle view
  */
 @SuppressLint("AppCompatCustomView")
-class ScrollTextView extends TextView {
+final class ScrollTextView extends TextView {
+    private long mDuration, mStartOffset;
+    private final ValueAnimator mScrollingAnimator = ValueAnimator.ofInt(0, 1);
+    private static final LinearInterpolator LINEAR_INTERPOLATOR = new LinearInterpolator();
+
     public ScrollTextView(Context context) {
         super(context);
         init();
@@ -1488,9 +1472,6 @@ class ScrollTextView extends TextView {
 
     private void init() {
         setSingleLine();
-        setEllipsize(TextUtils.TruncateAt.MARQUEE);
-        setMarqueeRepeatLimit(3);
-        setHorizontalFadingEdgeEnabled(true);
     }
 
 
@@ -1502,23 +1483,6 @@ class ScrollTextView extends TextView {
         } else setSelected(true);
     }
 
-    /**
-     * Get duration of marquee, roughly.
-     *
-     * @return assumed duration
-     */
-    public int getDuration() {
-        if (getLayout() == null) measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED);
-        final float density = getContext().getResources().getDisplayMetrics().density;
-        float dpPerSec = 30 * density;
-        float textWidth = getLayout().getLineWidth(0);
-        final float gap = textWidth / 3.0f;
-        int result = Math.round(
-                (textWidth - gap) / dpPerSec);
-        return result > 0 ? result * 100 : 2000;
-    }
-
-
     @Override
     public void setAlpha(float alpha) {
         super.setAlpha(alpha);
@@ -1528,8 +1492,8 @@ class ScrollTextView extends TextView {
     }
 
     public void stopScrolling() {
-        ((View) getParent()).requestFocus();
-        setSelected(false);
+        if (mScrollingAnimator.isRunning())
+            mScrollingAnimator.cancel();
     }
 
     public void startScrolling() {
@@ -1543,28 +1507,67 @@ class ScrollTextView extends TextView {
         super.onDetachedFromWindow();
         stopScrolling();
     }
+
+
+    /**
+     * Directly apply previously-calculated values instead of recalculating them
+     *
+     * @param scrollingDuration how many milliseconds shall the animator take to finish
+     *                          scrolling the overflown text
+     * @param startOffset       how many milliseconds before the animator starts
+     */
+    public void setDurations(long scrollingDuration, long startOffset) {
+        this.mDuration = scrollingDuration;
+        this.mStartOffset = startOffset;
+    }
+
+    /**
+     * Use previously-calculated values for efficiency
+     * @param scrollAmount previously-calculated horizontal scroll amount
+     */
+    void updateScroller(int scrollAmount) {
+        if (mScrollingAnimator.isRunning()) {
+            mScrollingAnimator.cancel();
+        }
+        if (scrollAmount == 0) return;
+        mScrollingAnimator.setIntValues(0, -scrollAmount);
+        mScrollingAnimator.removeAllListeners();
+        mScrollingAnimator.removeAllUpdateListeners();
+        mScrollingAnimator.addUpdateListener(new AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                scrollTo(-(Integer) animation.getAnimatedValue(), 0);
+            }
+        });
+        mScrollingAnimator.setDuration(mDuration);
+        //LINEAR_INTERPOLATOR must be used
+        mScrollingAnimator.setInterpolator(LINEAR_INTERPOLATOR);
+        mScrollingAnimator.setStartDelay(mStartOffset);
+        mScrollingAnimator.start();
+
+    }
 }
 
 /**
  * GradientDrawable that saves the drawable colors; used for AU background
  */
-class GradientDrawableWithColors extends GradientDrawable {
-    private int color;
+final class GradientDrawableWithColors extends GradientDrawable {
+    private int mColor;
 
     int getGradientColor() {
-        return color;
+        return mColor;
     }
 
     @Override
     public void setColor(int argb) {
         super.setColors(new int[]{argb, argb});
-        color = argb;
+        mColor = argb;
     }
 
     @Override
     public void setColors(int[] colors) {
         super.setColors(colors);
-        color = colors[0];
+        mColor = colors[0];
     }
 }
 
@@ -1601,17 +1604,29 @@ class AchievementIconView extends ImageView {
             if (drawable.getAlpha() < 255)
                 drawable.setAlpha(255);
 
-            animate().scaleX(0f).setDuration(200 * AchievementUnlocked.animationMultiplier).scaleY(0f).alpha(0f).withEndAction(new Runnable() {
-                @Override
-                public void run() {
-                    animate().setDuration(200 * AchievementUnlocked.animationMultiplier).scaleX(1 / Math.max(scaleX, scaleY)).scaleY(1 / Math.max(scaleX, scaleY)).alpha(1f).withStartAction(new Runnable() {
+            animate()
+                    .scaleX(0f)
+                    .setDuration(AchievementUnlocked.getScaledDuration(200))
+                    .scaleY(0f)
+                    .alpha(0f)
+                    .withEndAction(new Runnable() {
                         @Override
                         public void run() {
-                            setImageDrawable(drawable);
+                            animate()
+                                    .setDuration(AchievementUnlocked.getScaledDuration(200))
+                                    .scaleX(1 / Math.max(scaleX, scaleY))
+                                    .scaleY(1 / Math.max(scaleX, scaleY))
+                                    .alpha(1f)
+                                    .withStartAction(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            setImageDrawable(drawable);
+                                        }
+                                    })
+                                    .start();
                         }
-                    }).start();
-                }
-            }).start();
+                    })
+                    .start();
         }
     }
 
@@ -1633,24 +1648,32 @@ class AchievementIconView extends ImageView {
             if (drawable.getAlpha() < 255)
                 drawable.setAlpha(255);
 
-            animate().setDuration(50 * AchievementUnlocked.animationMultiplier).alpha(0f).withEndAction(new Runnable() {
-                @Override
-                public void run() {
-                    animate().setDuration(50 * AchievementUnlocked.animationMultiplier).alpha(1f).withStartAction(new Runnable() {
+            animate()
+                    .setDuration(AchievementUnlocked.getScaledDuration(50))
+                    .alpha(0f)
+                    .withEndAction(new Runnable() {
                         @Override
                         public void run() {
-                            setImageDrawable(drawable);
+                            animate()
+                                    .setDuration(AchievementUnlocked.getScaledDuration(50))
+                                    .alpha(1f)
+                                    .withStartAction(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            setImageDrawable(drawable);
+                                        }
+                                    })
+                                    .start();
                         }
-                    }).start();
-                }
-            }).start();
+                    })
+                    .start();
         }
     }
 
 }
 
 /* used by the abstract class adapter */
-@SuppressWarnings("unused")
+//@SuppressWarnings("unused")
 interface AchievementListener {
     void onViewCreated(AchievementUnlocked achievement, AchievementData[] data);
 
@@ -1660,7 +1683,10 @@ interface AchievementListener {
 }
 
 
-class DeceleratingInterpolator implements TimeInterpolator {
+/**
+ * Same as LogDecelerateInterpolator.java from Launcher3
+ */
+final class DeceleratingInterpolator implements TimeInterpolator {
 
     private int mBase;
     private final float mLogScale;
@@ -1681,7 +1707,7 @@ class DeceleratingInterpolator implements TimeInterpolator {
 }
 
 
-class WindowOverlayCompat {
+final class WindowOverlayCompat {
     private static final int ANDROID_OREO = 26;
     private static final int TYPE_APPLICATION_OVERLAY = 2038;
     static final int TYPE_SYSTEM_ERROR = Build.VERSION.SDK_INT < ANDROID_OREO ? WindowManager.LayoutParams.TYPE_SYSTEM_ERROR : TYPE_APPLICATION_OVERLAY;

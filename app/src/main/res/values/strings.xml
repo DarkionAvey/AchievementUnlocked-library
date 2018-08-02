@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">AchievementUnlocked</string>
+    <string name="app_name">Achievement Unlocked</string>
     <string name="clickable">Clickable</string>
     <string name="swipe_to_dismiss">Swipe to dismiss</string>
     <string name="extra">Extra</string>
@@ -30,7 +30,7 @@
     <string name="grant_permission">Grant permission</string>
     <string name="all_set">You\'re all set; enjoy</string>
     <string name="did_you_know">Did you know?</string>
-    <string name="popups_scroll_text_if_long">Popups can scroll if the text is too long</string>
+    <string name="popups_scroll_text_if_long">Popups can scroll if the text is too long; speed is configurable and can be set by using setScrollingPxPerSeconds(float) method</string>
     <string name="like_the_app">Like the app?</string>
     <string name="leave_a_positive_review_on_google_play_store_it_helps_a_lot">Leave a positive review on Google Play store, it helps a lot!</string>
 </resources>
